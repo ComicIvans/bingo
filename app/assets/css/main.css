@@ -1,0 +1,112 @@
+@import 'tailwindcss';
+@import '@nuxt/ui';
+
+@theme {
+  --font-sans: 'Montserrat', var(--font-glyphs);
+  --font-display: 'Lexend Deca', 'Montserrat', var(--font-glyphs);
+}
+
+/* Bundled fonts used by the UI (the card generator loads its own on demand). */
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 500;
+  font-display: swap;
+  src: url('/fonts/montserrat-500.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/montserrat-700.ttf') format('truetype');
+}
+@font-face {
+  font-family: 'Lexend Deca';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/lexend-deca-700.ttf') format('truetype');
+}
+
+/* Bundled fallbacks for labels the UI fonts cannot draw (Greek, math,
+   symbols), the same chain the card generator uses, so the screens show the
+   glyphs printed on the cards.
+   The ranges leave out what Lexend Deca and Montserrat already cover (Latin up
+   to U+017F and the usual punctuation): while the main font is still loading,
+   the browser downloads every face of the stack whose range matches the text,
+   and these files weigh 0.2-1.2 MB each. Only the primes (′ ″) of General
+   Punctuation stay, because Lexend Deca lacks ′. */
+@font-face {
+  font-family: 'Bingo Noto Sans';
+  font-weight: 100 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-400.ttf') format('truetype');
+  unicode-range:
+    U+0180-058F, U+1D00-1DBF, U+1E00-1FFF, U+2032-2037, U+2070-20CF, U+2100-218F, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Bingo Noto Sans';
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/fonts/noto-sans-700.ttf') format('truetype');
+  unicode-range:
+    U+0180-058F, U+1D00-1DBF, U+1E00-1FFF, U+2032-2037, U+2070-20CF, U+2100-218F, U+2C60-2C7F,
+    U+A720-A7FF;
+}
+@font-face {
+  font-family: 'Bingo Noto Sans Math';
+  font-display: swap;
+  src: url('/fonts/noto-sans-math-400.ttf') format('truetype');
+  unicode-range: U+0300-03FF, U+2032-2037, U+2070-2BFF, U+3000-303F, U+1D400-1D7FF, U+1EE00-1EEFF;
+}
+@font-face {
+  font-family: 'Bingo Noto Sans Symbols';
+  font-weight: 100 600;
+  font-display: swap;
+  src: url('/fonts/noto-sans-symbols-400.ttf') format('truetype');
+  unicode-range: U+2070-2BFF, U+1F000-1FBFF;
+}
+@font-face {
+  font-family: 'Bingo Noto Sans Symbols';
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/fonts/noto-sans-symbols-700.ttf') format('truetype');
+  unicode-range: U+2070-2BFF, U+1F000-1FBFF;
+}
+@font-face {
+  font-family: 'Bingo Noto Sans Symbols 2';
+  font-display: swap;
+  src: url('/fonts/noto-sans-symbols-2-400.ttf') format('truetype');
+  unicode-range: U+2070-2BFF, U+1F000-1FBFF;
+}
+/* Emoji only (with the joiner and the variation selectors of emoji sequences). */
+@font-face {
+  font-family: 'Bingo Noto Emoji';
+  font-weight: 100 600;
+  font-display: swap;
+  src: url('/fonts/noto-emoji-400.ttf') format('truetype');
+  unicode-range:
+    U+200D, U+203C, U+2049, U+2100-2BFF, U+3030, U+303D, U+3297, U+3299, U+FE0E-FE0F, U+1F000-1FAFF;
+}
+@font-face {
+  font-family: 'Bingo Noto Emoji';
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/fonts/noto-emoji-700.ttf') format('truetype');
+  unicode-range:
+    U+200D, U+203C, U+2049, U+2100-2BFF, U+3030, U+303D, U+3297, U+3299, U+FE0E-FE0F, U+1F000-1FAFF;
+}
+
+@font-face {
+  font-family: 'Roboto Mono';
+  font-weight: 700;
+  font-display: swap;
+  src: url('/fonts/roboto-mono-700.ttf') format('truetype');
+}
+
+:root {
+  /* Append after the main font: font-family: 'Lexend Deca', var(--font-glyphs); */
+  --font-glyphs:
+    'Bingo Noto Sans', 'Bingo Noto Sans Math', 'Bingo Noto Sans Symbols',
+    'Bingo Noto Sans Symbols 2', 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji',
+    'Bingo Noto Emoji', ui-sans-serif, system-ui, sans-serif;
+}
