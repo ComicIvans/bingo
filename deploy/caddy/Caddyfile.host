@@ -1,0 +1,13 @@
+# Caddy instalado en el propio servidor (sin Docker), delante del servicio
+# systemd o del contenedor publicado en 127.0.0.1:3000. Añade este bloque a
+# /etc/caddy/Caddyfile (sin borrar los sitios que ya tengas; en un servidor
+# nuevo puedes sustituir el archivo entero), cambia bingo.example.com por tu
+# dominio y ejecuta: sudo systemctl reload caddy
+bingo.example.com {
+	header Strict-Transport-Security "max-age=31536000"
+
+	@compressible not path /api/live/stream
+	encode @compressible zstd gzip
+
+	reverse_proxy 127.0.0.1:3000
+}

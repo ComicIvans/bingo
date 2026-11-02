@@ -1,0 +1,59 @@
+# Servicio para ejecutar el bingo sin Docker. Supone:
+#   - el contenido de .output en /opt/bingo/.output
+#   - el archivo de variables en /opt/bingo/.env
+#   - un usuario de sistema "bingo" (useradd --system --home /opt/bingo bingo)
+# Instálalo con:
+#   sudo cp deploy/systemd/bingo.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now bingo
+
+[Unit]
+Description=Bingo (generador de cartones y partida en directo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bingo
+Group=bingo
+WorkingDirectory=/opt/bingo
+# Clave del panel y secreto de sesión. Las variables de este archivo tienen
+# prioridad sobre las Environment= de abajo: no definas en él NUXT_DATA_DIR,
+# HOST ni PORT salvo que quieras cambiarlos.
+EnvironmentFile=/opt/bingo/.env
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=NUXT_DATA_DIR=/var/lib/bingo
+Environment=TZ=Europe/Madrid
+ExecStart=/usr/bin/node /opt/bingo/.output/server/index.mjs
+Restart=on-failure
+RestartSec=3
+
+# systemd crea /var/lib/bingo con el dueño correcto.
+StateDirectory=bingo
+StateDirectoryMode=0750
+
+# Aislamiento: el proceso solo puede escribir en su carpeta de datos.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+RestrictRealtime=true
+LockPersonality=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallArchitectures=native
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -1,8 +1,21 @@
+# Despliegue con Docker (ver DESPLIEGUE.md).
+#
+#   docker compose up -d --build                  solo la aplicación, en 127.0.0.1:3000
+#                                                  (detrás de tu nginx o Caddy)
+#   docker compose --profile caddy up -d --build  aplicación + Caddy con HTTPS automático
+#                                                  para BINGO_DOMAIN
+#
+# Compose lee las variables BINGO_* de .env, el mismo archivo que recibe el
+# contenedor de la aplicación.
+
+# Nombre fijo: el volumen de datos se llama siempre bingo_bingo_data, sea cual
+# sea la carpeta del proyecto (lo usan las copias de seguridad de la guía).
+name: bingo
+
 services:
   bingo:
     build: .
-    image: bingo-full:latest
-    container_name: bingo
+    image: ${BINGO_IMAGE:-bingo-full:latest}
     restart: unless-stopped
     read_only: true
     cap_drop:
@@ -11,23 +24,26 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:size=32m,mode=1777
+    # Solo en local por defecto: el acceso público pasa por el proxy. Para
+    # servir directamente por IP (sin dominio) pon BINGO_BIND=0.0.0.0.
     ports:
-      - "3000:3000"
-    # NUXT_ADMIN_KEY and NUXT_SESSION_PASSWORD come from .env (see .env.example).
+      - '${BINGO_BIND:-127.0.0.1}:${BINGO_PORT:-3000}:3000'
+    # NUXT_ADMIN_KEY y NUXT_SESSION_PASSWORD (ver .env.example).
     env_file:
       - .env
     environment:
-      NODE_ENV: "production"
-      NUXT_DATA_DIR: "/data"
-    # Current game, history, custom sets, card batches and the logo.
+      NODE_ENV: 'production'
+      NUXT_DATA_DIR: '/data'
+      TZ: '${TZ:-Europe/Madrid}'
+    # Partida en curso, historial, conjuntos, lotes y logo.
     volumes:
       - bingo_data:/data
     healthcheck:
       test:
         [
-          "CMD",
-          "/nodejs/bin/node",
-          "-e",
+          'CMD',
+          '/nodejs/bin/node',
+          '-e',
           "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
         ]
       interval: 30s
@@ -37,8 +53,33 @@ services:
     logging:
       driver: json-file
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: '10m'
+        max-file: '3'
+
+  caddy:
+    image: caddy:2.10-alpine
+    profiles: ['caddy']
+    restart: unless-stopped
+    depends_on:
+      bingo:
+        condition: service_healthy
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      BINGO_DOMAIN: '${BINGO_DOMAIN:-localhost}'
+    volumes:
+      - ./deploy/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '3'
 
 volumes:
   bingo_data:
+  caddy_data:
+  caddy_config:

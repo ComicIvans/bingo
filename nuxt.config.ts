@@ -32,7 +32,23 @@ export default defineNuxtConfig({
 
   // The viewer, board and panel read live data; the generator is a client app.
   routeRules: {
+    '/**': {
+      headers: {
+        'X-Content-Type-Options': 'nosniff',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+      },
+    },
     '/generador': { ssr: false },
+    // The panel must not be framed by other sites (clickjacking). The public
+    // screen and the board stay embeddable.
+    '/panel': { headers: { 'X-Frame-Options': 'DENY' } },
+    '/panel/**': { headers: { 'X-Frame-Options': 'DENY' } },
+  },
+
+  nitro: {
+    // Ship gzip/brotli copies of the static files (the bundled fonts weigh
+    // ~10 MB) so any server or proxy can send them compressed.
+    compressPublicAssets: { gzip: true, brotli: true },
   },
 
   vite: {

@@ -1,0 +1,8 @@
+# Unix line endings everywhere, so files copied to a Linux server (Caddyfile,
+# systemd unit, nginx config) work as they are.
+* text=auto eol=lf
+
+*.ttf binary
+*.png binary
+*.ico binary
+*.pdf binary

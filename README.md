@@ -54,20 +54,23 @@ Servidor de desarrollo en `http://localhost:3000`:
 pnpm dev
 ```
 
-Compilación y arranque en producción:
+Compilación y arranque en producción (el servidor compilado no lee `.env` por sí solo):
 
 ```bash
 pnpm build
-node .output/server/index.mjs
+node --env-file=.env .output/server/index.mjs
 ```
 
-### Docker
+### Despliegue en un servidor
+
+La guía [DESPLIEGUE.md](DESPLIEGUE.md) explica paso a paso cómo publicarlo en cualquier VPS: con Docker y HTTPS automático (Caddy), con Docker detrás de un nginx que ya tengas, o sin Docker como servicio systemd. También cubre actualizaciones, copias de seguridad y problemas frecuentes. Los archivos de ejemplo están en `deploy/`.
+
+Con Docker y un dominio que ya apunte al servidor, basta con:
 
 ```bash
-docker compose up -d --build
+cp .env.example .env && chmod 600 .env   # define NUXT_ADMIN_KEY, NUXT_SESSION_PASSWORD y BINGO_DOMAIN
+sudo docker compose --profile caddy up -d --build
 ```
-
-Los datos se guardan en el volumen `bingo_data` (`/data` dentro del contenedor). Detrás de nginx, desactiva el búfer de la ruta `/api/live/stream` (la aplicación ya envía `X-Accel-Buffering: no`).
 
 ## Desarrollo
 

@@ -1,0 +1,16 @@
+# Caddy en Docker (docker compose --profile caddy). Pide y renueva el
+# certificado HTTPS solo, para el dominio de BINGO_DOMAIN en .env, y redirige
+# http:// a https://.
+{$BINGO_DOMAIN} {
+	# El navegador recordará usar siempre https:// (salvo en localhost, para no
+	# afectar a las pruebas locales).
+	@hsts not host localhost
+	header @hsts Strict-Transport-Security "max-age=31536000"
+
+	# Comprime todo menos el flujo en directo: los eventos deben salir en
+	# cuanto se producen (Caddy ya vacía el búfer de text/event-stream).
+	@compressible not path /api/live/stream
+	encode @compressible zstd gzip
+
+	reverse_proxy bingo:3000
+}

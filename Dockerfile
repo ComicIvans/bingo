@@ -19,7 +19,9 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 COPY . .
 
-RUN NODE_ENV=production pnpm run build
+# Node sizes its heap from the physical RAM (about 512 MB on a 1 GB VPS),
+# which is not enough for the build; with swap, a larger limit gets through.
+RUN NODE_ENV=production NODE_OPTIONS=--max-old-space-size=2048 pnpm run build
 
 RUN mkdir -p /runtime-data
 
