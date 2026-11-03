@@ -14,7 +14,14 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'es' },
       title: 'Bingo',
       meta: [{ name: 'description', content: 'Bingo en directo y generador de cartones.' }],
-      link: [{ rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' }],
+      link: [
+        // ICO (16, 32 and 48 px) for browsers without SVG favicons. Declared
+        // as 32x32 so browsers that support SVG still pick the SVG.
+        { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        // Home screen icon on iPhone and iPad (opaque: iOS fills transparency with black).
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      ],
     },
   },
 
