@@ -2,7 +2,6 @@ import {
   CardGenerationError,
   generateBatch,
   gridSpecFor,
-  regenerateCard,
   validateSpec,
   type CardCells,
   type CardFormat,
@@ -111,13 +110,9 @@ export function rebuildCard(batch: CardBatch, number: number): CardCells | null 
     } catch (error) {
       if (!(error instanceof CardGenerationError)) throw error
       // The whole batch cannot be rebuilt (an imported file asking for too
-      // many cards); the cards before the failing one still can.
-      try {
-        return regenerateCard(params, number)?.cells ?? null
-      } catch (retryError) {
-        if (retryError instanceof CardGenerationError) return null
-        throw retryError
-      }
+      // many cards); the cards before the failing one still can, and are
+      // kept so later checks do not generate them all again.
+      cards = error.partial
     }
     cardCache.set(key, cards)
     while (cardCache.size > MAX_CACHED_BATCHES) cardCache.delete(cardCache.keys().next().value!)

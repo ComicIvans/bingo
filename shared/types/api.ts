@@ -287,7 +287,10 @@ export interface RegisterBatchBody {
   setId: string
   count: number
   firstNumber: number
-  /** Only for sets that are not on the server (imported in the generator). */
+  /**
+   * Items the cards were drawn from. Required for sets that are not on the
+   * server; for server sets the batch is refused if they no longer match.
+   */
   items?: BingoItem[]
   setName?: string
 }

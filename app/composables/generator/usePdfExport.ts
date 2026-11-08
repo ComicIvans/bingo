@@ -235,7 +235,10 @@ export function usePdfExport(source: ExportSource) {
         setId: snap.set.id,
         count: snap.count,
         firstNumber: snap.firstNumber,
-        ...(snap.set.local ? { items: snap.set.items, setName: snap.set.name } : {}),
+        // Also for server sets, so the server can refuse the batch if the set
+        // changed after the check above.
+        items: snap.set.items,
+        ...(snap.set.local ? { setName: snap.set.name } : {}),
       }
       try {
         const summary = await $fetch<CardBatchSummary>('/api/batches', { method: 'POST', body })
