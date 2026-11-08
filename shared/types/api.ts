@@ -38,11 +38,13 @@
 //   GET    /api/settings                                      → Settings
 //   PUT    /api/settings      (admin) Partial<SettingsBody>   → Settings
 //   GET    /api/branding/logo?variant=dark|light&v=<logoVersion>
-//                             → the uploaded logo, or a redirect to the
-//                               default (/LogoBingoClaro.svg on dark,
-//                               /LogoBingo.svg on light)
-//   POST   /api/branding/logo (admin) multipart field `file`  → Settings  (PNG, JPEG, WebP or SVG, ≤ 2 MB)
-//   DELETE /api/branding/logo (admin)                         → Settings  (back to the default logo)
+//                             → the logo uploaded for that background, else
+//                               the one uploaded for the other, else a
+//                               redirect to the default (/LogoBingoClaro.svg
+//                               on dark, /LogoBingo.svg on light)
+//   POST   /api/branding/logo?variant=dark|light (admin) multipart field `file`
+//                                                             → Settings  (PNG, JPEG, WebP or SVG, ≤ 2 MB)
+//   DELETE /api/branding/logo?variant=dark|light (admin)      → Settings  (removes that background's logo)
 //
 // Card batches and checking
 //   POST   /api/batches       (admin) RegisterBatchBody       → CardBatchSummary (409 if the id exists)
@@ -79,7 +81,10 @@ export interface Settings {
   recentCount: number
   /** Bumped on every logo upload or reset, to bust caches. */
   logoVersion: number
+  /** A logo was uploaded for light backgrounds (also used on the cards). */
   hasCustomLogo: boolean
+  /** A logo was uploaded for dark backgrounds. */
+  hasCustomDarkLogo: boolean
 }
 
 export type SettingsBody = Pick<Settings, 'title' | 'subtitle' | 'publicTheme' | 'recentCount'>
@@ -91,6 +96,7 @@ export const DEFAULT_SETTINGS: Settings = {
   recentCount: 8,
   logoVersion: 0,
   hasCustomLogo: false,
+  hasCustomDarkLogo: false,
 }
 
 // ─── Games ─────────────────────────────────────────────────────────────────

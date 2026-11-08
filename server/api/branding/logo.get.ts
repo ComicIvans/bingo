@@ -1,9 +1,14 @@
-// Serves the uploaded logo, or redirects to the default one for the variant.
-// `v` (the settings' logoVersion) only busts caches.
+// Serves the logo uploaded for the variant's background, else the one uploaded
+// for the other background (a single upload covers both), else redirects to
+// the default one for the variant. `v` (the settings' logoVersion) only busts
+// caches.
 export default defineEventHandler(async (event) => {
-  const variant = getQuery(event).variant === 'dark' ? 'dark' : 'light'
+  const variant: LogoVariant = getQuery(event).variant === 'dark' ? 'dark' : 'light'
+  const other: LogoVariant = variant === 'dark' ? 'light' : 'dark'
   const settings = await readSettings()
-  const logo = settings.hasCustomLogo ? await readLogo() : null
+  const logo =
+    (settings[LOGO_FLAG[variant]] ? await readLogo(variant) : null) ??
+    (settings[LOGO_FLAG[other]] ? await readLogo(other) : null)
 
   if (!logo) {
     setResponseHeader(event, 'Cache-Control', 'no-cache')

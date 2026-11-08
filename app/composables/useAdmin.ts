@@ -198,15 +198,20 @@ export function useAdmin() {
     async updateSettings(body: Partial<SettingsBody>) {
       return patchSettings(await request<Settings>('/api/settings', { method: 'PUT', body }))
     },
-    async uploadLogo(file: File) {
+    async uploadLogo(file: File, variant: 'dark' | 'light') {
       const form = new FormData()
       form.append('file', file)
       return patchSettings(
-        await request<Settings>('/api/branding/logo', { method: 'POST', body: form })
+        await request<Settings>(`/api/branding/logo?variant=${variant}`, {
+          method: 'POST',
+          body: form,
+        })
       )
     },
-    async resetLogo() {
-      return patchSettings(await request<Settings>('/api/branding/logo', { method: 'DELETE' }))
+    async resetLogo(variant: 'dark' | 'light') {
+      return patchSettings(
+        await request<Settings>(`/api/branding/logo?variant=${variant}`, { method: 'DELETE' })
+      )
     },
 
     // Card batches and checking

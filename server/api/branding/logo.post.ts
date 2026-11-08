@@ -4,6 +4,7 @@ const TOO_BIG = 'El logo no puede ocupar más de 2 MB.'
 
 export default defineEventHandler(async (event): Promise<Settings> => {
   await requireAdmin(event)
+  const variant = requireLogoVariant(event)
 
   // Refuse oversized uploads before reading them into memory (the form
   // adds a few bytes around the file).
@@ -25,11 +26,11 @@ export default defineEventHandler(async (event): Promise<Settings> => {
   if (!type) throw apiError(415, 'El logo tiene que ser una imagen PNG, JPEG, WebP o SVG.')
 
   const { result } = await mutateLive(async () => {
-    await writeLogo(bytes, type)
+    await writeLogo(variant, bytes, type)
     const settings = await readSettings()
     const next: Settings = {
       ...settings,
-      hasCustomLogo: true,
+      [LOGO_FLAG[variant]]: true,
       logoVersion: settings.logoVersion + 1,
     }
     await writeSettings(next)

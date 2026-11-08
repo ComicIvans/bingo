@@ -1,3 +1,6 @@
+import type { H3Event } from 'h3'
+import type { Settings } from '#shared/types/api'
+
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024
 
 const startsWith = (bytes: Uint8Array, signature: number[], offset = 0) =>
@@ -26,7 +29,20 @@ export function detectLogoType(bytes: Uint8Array): LogoType | null {
 }
 
 /** Default logo for a variant (the light one is drawn for dark backgrounds). */
-export function defaultLogoPath(variant: 'dark' | 'light'): string {
+export function defaultLogoPath(variant: LogoVariant): string {
   const base = useRuntimeConfig().app.baseURL.replace(/\/+$/, '')
   return `${base}/${variant === 'dark' ? 'LogoBingoClaro.svg' : 'LogoBingo.svg'}`
 }
+
+/** `?variant=` of an upload or reset; required, so a typo never hits the wrong logo. */
+export function requireLogoVariant(event: H3Event): LogoVariant {
+  const variant = getQuery(event).variant
+  if (variant === 'dark' || variant === 'light') return variant
+  throw apiError(400, 'Indica para qué fondo es el logo (claro u oscuro).')
+}
+
+/** Settings field that says whether a variant has an uploaded logo. */
+export const LOGO_FLAG = {
+  light: 'hasCustomLogo',
+  dark: 'hasCustomDarkLogo',
+} as const satisfies Record<LogoVariant, keyof Settings>

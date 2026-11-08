@@ -93,24 +93,58 @@ function logoType(file: File): string | null {
   return LOGO_TYPES[file.name.split('.').pop()?.toLowerCase() ?? ''] ?? null
 }
 
-const logoFile = ref<File | null>(null)
-const logoError = ref<string | null>(null)
-const previewUrl = ref<string | null>(null)
+type LogoVariant = 'dark' | 'light'
 
-watch(logoFile, (file) => {
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
-  previewUrl.value = null
-  logoError.value = null
-  if (!file) return
-  const type = logoType(file)
-  if (!type) logoError.value = 'Formato no admitido. Usa PNG, JPEG, WebP o SVG.'
-  else if (file.size > LOGO_MAX_BYTES) logoError.value = 'El archivo pesa más de 2 MB.'
-  // An SVG only shows in <img> with its MIME type set.
-  else previewUrl.value = URL.createObjectURL(file.type ? file : new Blob([file], { type }))
-})
+interface LogoSlot {
+  variant: LogoVariant
+  /** Name of the background, for labels ("fondo oscuro"). */
+  background: string
+  /** Classes of the preview box. */
+  boxClass: string
+  file: File | null
+  error: string | null
+  previewUrl: string | null
+}
+
+const slots = reactive<LogoSlot[]>([
+  {
+    variant: 'dark',
+    background: 'fondo oscuro',
+    boxClass: 'bg-zinc-950',
+    file: null,
+    error: null,
+    previewUrl: null,
+  },
+  {
+    variant: 'light',
+    background: 'fondo claro',
+    boxClass: 'bg-white',
+    file: null,
+    error: null,
+    previewUrl: null,
+  },
+])
+const otherSlot = (slot: LogoSlot) => slots.find((other) => other.variant !== slot.variant)!
+
+for (const slot of slots) {
+  watch(
+    () => slot.file,
+    (file) => {
+      if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl)
+      slot.previewUrl = null
+      slot.error = null
+      if (!file) return
+      const type = logoType(file)
+      if (!type) slot.error = 'Formato no admitido. Usa PNG, JPEG, WebP o SVG.'
+      else if (file.size > LOGO_MAX_BYTES) slot.error = 'El archivo pesa más de 2 MB.'
+      // An SVG only shows in <img> with its MIME type set.
+      else slot.previewUrl = URL.createObjectURL(file.type ? file : new Blob([file], { type }))
+    }
+  )
+}
 
 onBeforeUnmount(() => {
-  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value)
+  for (const slot of slots) if (slot.previewUrl) URL.revokeObjectURL(slot.previewUrl)
 })
 
 // A dropped file of another type is discarded by UFileUpload without a word.
@@ -126,35 +160,79 @@ function onLogoRejected(files: File[]) {
 const logoVersion = computed(
   () => settings.value?.logoVersion ?? live.value?.settings.logoVersion ?? 0
 )
-const hasCustomLogo = computed(
-  () => settings.value?.hasCustomLogo ?? live.value?.settings.hasCustomLogo ?? false
-)
-const logoSrc = (variant: 'dark' | 'light') =>
-  previewUrl.value ?? `/api/branding/logo?variant=${variant}&v=${logoVersion.value}`
-
-async function uploadLogo() {
-  const file = logoFile.value
-  if (!file || logoError.value) return
-  const saved = await admin.uploadLogo(file)
-  if (!saved) return
-  settings.value = saved
-  logoFile.value = null
-  toast.add({ title: 'Logo actualizado', color: 'success', icon: 'i-lucide-image' })
+function hasCustomLogo(variant: LogoVariant): boolean {
+  const current = settings.value ?? live.value?.settings
+  return (variant === 'dark' ? current?.hasCustomDarkLogo : current?.hasCustomLogo) ?? false
 }
 
-async function resetLogo() {
+/**
+ * What the slot shows: its pending file, else what the server serves for it
+ * (its own upload, the other background's upload, or the default logo).
+ */
+function logoSrc(slot: LogoSlot): string {
+  if (slot.previewUrl) return slot.previewUrl
+  // A pending file for the other background will also be used here while
+  // this one has no upload of its own.
+  const other = otherSlot(slot)
+  if (!hasCustomLogo(slot.variant) && other.previewUrl) return other.previewUrl
+  return `/api/branding/logo?variant=${slot.variant}&v=${logoVersion.value}`
+}
+
+function logoStatus(slot: LogoSlot): string {
+  if (slot.previewUrl) return 'Vista previa: pulsa «Subir» para usarlo.'
+  if (hasCustomLogo(slot.variant)) return 'Logo subido.'
+  const other = otherSlot(slot)
+  if (other.previewUrl || hasCustomLogo(other.variant)) return `Usa el logo de ${other.background}.`
+  return 'Logo por defecto.'
+}
+
+const busyVariant = ref<LogoVariant | null>(null)
+
+async function uploadLogo(slot: LogoSlot) {
+  const file = slot.file
+  if (!file || slot.error) return
+  busyVariant.value = slot.variant
+  try {
+    const saved = await admin.uploadLogo(file, slot.variant)
+    if (!saved) return
+    settings.value = saved
+    slot.file = null
+    toast.add({
+      title: `Logo para ${slot.background} actualizado`,
+      color: 'success',
+      icon: 'i-lucide-image',
+    })
+  } finally {
+    busyVariant.value = null
+  }
+}
+
+async function resetLogo(slot: LogoSlot) {
+  const other = otherSlot(slot)
+  const fallback = hasCustomLogo(other.variant)
+    ? `se usará el de ${other.background}`
+    : 'se volverá a usar el de la aplicación'
   const ok = await confirm({
-    title: '¿Restaurar el logo por defecto?',
-    description: 'Se borrará el logo subido y se volverá a usar el de la aplicación.',
-    confirmLabel: 'Restaurar',
+    title: `¿Quitar el logo para ${slot.background}?`,
+    description: `Se borrará el logo subido y en ${slot.background} ${fallback}.`,
+    confirmLabel: 'Quitar',
     color: 'error',
     icon: 'i-lucide-image-off',
   })
   if (!ok) return
-  const saved = await admin.resetLogo()
-  if (!saved) return
-  settings.value = saved
-  toast.add({ title: 'Logo por defecto restaurado', color: 'success', icon: 'i-lucide-image' })
+  busyVariant.value = slot.variant
+  try {
+    const saved = await admin.resetLogo(slot.variant)
+    if (!saved) return
+    settings.value = saved
+    toast.add({
+      title: `Logo para ${slot.background} quitado`,
+      color: 'success',
+      icon: 'i-lucide-image',
+    })
+  } finally {
+    busyVariant.value = null
+  }
 }
 </script>
 
@@ -234,76 +312,68 @@ async function resetLogo() {
           <template #header>
             <h2 class="font-semibold text-highlighted">Logo</h2>
             <p class="text-sm text-muted">
-              Se muestra en la pantalla pública, en el panel y como logo por defecto de los
-              cartones. PNG, JPEG, WebP o SVG de hasta 2 MB; mejor con fondo transparente.
+              Se muestra en la pantalla pública y en el panel, según su tema. Sube uno para cada
+              fondo; si solo subes uno, se usa en los dos. Los cartones usan el de fondo claro. PNG,
+              JPEG, WebP o SVG de hasta 2 MB, mejor con fondo transparente.
             </p>
           </template>
 
-          <div class="grid gap-3 sm:grid-cols-2">
-            <figure class="space-y-1.5">
-              <div
-                class="flex h-36 items-center justify-center rounded-lg bg-zinc-950 p-4 ring-1 ring-default"
+          <div class="grid gap-6 sm:grid-cols-2 sm:gap-4">
+            <section v-for="slot in slots" :key="slot.variant" class="flex flex-col gap-3">
+              <figure class="space-y-1.5">
+                <figcaption class="text-sm font-medium text-highlighted">
+                  Para {{ slot.background }}
+                </figcaption>
+                <div
+                  class="flex h-36 items-center justify-center rounded-lg p-4 ring-1 ring-default"
+                  :class="slot.boxClass"
+                >
+                  <img
+                    :src="logoSrc(slot)"
+                    :alt="`Logo sobre ${slot.background}`"
+                    class="max-h-full max-w-full object-contain"
+                  />
+                </div>
+                <p class="text-xs" :class="slot.previewUrl ? 'text-info' : 'text-muted'">
+                  {{ logoStatus(slot) }}
+                </p>
+              </figure>
+
+              <UFormField
+                :label="`Nuevo logo para ${slot.background}`"
+                :error="slot.error ?? undefined"
+                :ui="{ label: 'sr-only' }"
               >
-                <img
-                  :src="logoSrc('dark')"
-                  alt="Vista previa del logo sobre fondo oscuro"
-                  class="max-h-full max-w-full object-contain"
+                <UFileUpload
+                  v-model="slot.file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
+                  label="Arrastra aquí el logo"
+                  description="o pulsa para elegir un archivo"
+                  icon="i-lucide-image-up"
+                  layout="list"
+                  class="w-full"
+                  @reject="onLogoRejected"
+                />
+              </UFormField>
+
+              <div class="mt-auto flex flex-wrap justify-end gap-2">
+                <UButton
+                  label="Quitar"
+                  icon="i-lucide-rotate-ccw"
+                  color="error"
+                  variant="outline"
+                  :disabled="!hasCustomLogo(slot.variant) || admin.pending.value"
+                  @click="resetLogo(slot)"
+                />
+                <UButton
+                  label="Subir"
+                  icon="i-lucide-upload"
+                  :disabled="!slot.file || !!slot.error || admin.pending.value"
+                  :loading="busyVariant === slot.variant"
+                  @click="uploadLogo(slot)"
                 />
               </div>
-              <figcaption class="text-xs text-muted">Sobre fondo oscuro</figcaption>
-            </figure>
-            <figure class="space-y-1.5">
-              <div
-                class="flex h-36 items-center justify-center rounded-lg bg-white p-4 ring-1 ring-default"
-              >
-                <img
-                  :src="logoSrc('light')"
-                  alt="Vista previa del logo sobre fondo claro"
-                  class="max-h-full max-w-full object-contain"
-                />
-              </div>
-              <figcaption class="text-xs text-muted">Sobre fondo claro</figcaption>
-            </figure>
-          </div>
-
-          <UAlert
-            v-if="previewUrl"
-            color="info"
-            variant="subtle"
-            icon="i-lucide-eye"
-            title="Vista previa"
-            description="Así se verá el logo nuevo. Pulsa «Subir logo» para usarlo."
-          />
-
-          <UFormField label="Nuevo logo" :error="logoError ?? undefined">
-            <UFileUpload
-              v-model="logoFile"
-              accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg"
-              label="Arrastra aquí el logo"
-              description="o pulsa para elegir un archivo"
-              icon="i-lucide-image-up"
-              layout="list"
-              class="w-full"
-              @reject="onLogoRejected"
-            />
-          </UFormField>
-
-          <div class="flex flex-wrap justify-end gap-2">
-            <UButton
-              label="Restaurar logo por defecto"
-              icon="i-lucide-rotate-ccw"
-              color="error"
-              variant="outline"
-              :disabled="!hasCustomLogo || admin.pending.value"
-              @click="resetLogo"
-            />
-            <UButton
-              label="Subir logo"
-              icon="i-lucide-upload"
-              :disabled="!logoFile || !!logoError"
-              :loading="admin.pending.value"
-              @click="uploadLogo"
-            />
+            </section>
           </div>
         </UCard>
       </div>

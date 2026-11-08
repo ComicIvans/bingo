@@ -10,10 +10,15 @@ import type { BingoSet } from '#shared/types/bingo'
 //   games:<id>             GameRecord (running and finished)
 //   sets:<id>              custom BingoSet
 //   batches:<id>           CardBatch
-//   branding:logo          raw logo bytes
+//   branding:logo          raw bytes of the logo for light backgrounds
 //   branding:logo-meta     LogoMeta
+//   branding:logo-dark     raw bytes of the logo for dark backgrounds
+//   branding:logo-dark-meta LogoMeta
 
 export type LogoType = 'image/png' | 'image/jpeg' | 'image/webp' | 'image/svg+xml'
+
+/** Background a logo is drawn on. */
+export type LogoVariant = 'dark' | 'light'
 
 export interface LogoMeta {
   type: LogoType
@@ -138,24 +143,36 @@ export async function readAllBatches(): Promise<CardBatch[]> {
 
 // ─── Logo ──────────────────────────────────────────────────────────────────
 
-export async function readLogo(): Promise<{ bytes: Uint8Array; meta: LogoMeta } | null> {
+// The light logo keeps the original keys, so logos uploaded before there
+// were two variants still work.
+const LOGO_KEYS: Record<LogoVariant, { bytes: string; meta: string }> = {
+  light: { bytes: 'branding:logo', meta: 'branding:logo-meta' },
+  dark: { bytes: 'branding:logo-dark', meta: 'branding:logo-dark-meta' },
+}
+
+export async function readLogo(
+  variant: LogoVariant
+): Promise<{ bytes: Uint8Array; meta: LogoMeta } | null> {
   const storage = bingoStorage()
-  const meta = await readRecord<LogoMeta>('branding:logo-meta')
+  const keys = LOGO_KEYS[variant]
+  const meta = await readRecord<LogoMeta>(keys.meta)
   if (!meta) return null
-  const raw = await storage.getItemRaw('branding:logo')
+  const raw = await storage.getItemRaw(keys.bytes)
   if (!(raw instanceof Uint8Array) || raw.byteLength === 0) return null
   return { bytes: raw, meta }
 }
 
-export async function writeLogo(bytes: Uint8Array, type: LogoType) {
+export async function writeLogo(variant: LogoVariant, bytes: Uint8Array, type: LogoType) {
   const storage = bingoStorage()
-  await storage.setItemRaw('branding:logo', bytes)
+  const keys = LOGO_KEYS[variant]
+  await storage.setItemRaw(keys.bytes, bytes)
   const meta: LogoMeta = { type, size: bytes.byteLength, updatedAt: new Date().toISOString() }
-  await storage.setItem('branding:logo-meta', meta)
+  await storage.setItem(keys.meta, meta)
 }
 
-export async function removeLogo() {
+export async function removeLogo(variant: LogoVariant) {
   const storage = bingoStorage()
-  await storage.removeItem('branding:logo-meta')
-  await storage.removeItem('branding:logo')
+  const keys = LOGO_KEYS[variant]
+  await storage.removeItem(keys.meta)
+  await storage.removeItem(keys.bytes)
 }
