@@ -10,6 +10,8 @@ const props = defineProps<{
   color: string
   /** Whether pointer controls (the close button) should be visible. */
   controlsVisible: boolean
+  /** The public screen uses its dark theme (fireworks glow there). */
+  dark: boolean
 }>()
 
 const emit = defineEmits<{ dismiss: [] }>()
@@ -34,12 +36,22 @@ onKeyStroke('Escape', () => emit('dismiss'))
     :style="{ '--c': color }"
     @click="emit('dismiss')"
   >
+    <!-- A line gets confetti; a bingo gets light rays and fireworks. -->
+    <template v-if="announcement.kind === 'bingo'">
+      <div class="announce__rays" aria-hidden="true" />
+      <LiveFireworks
+        :key="announcement.id"
+        :colors="confettiColors"
+        :duration="9000"
+        :glow="dark"
+      />
+    </template>
     <LiveConfetti
-      v-if="celebration"
+      v-else-if="celebration"
       :key="announcement.id"
       :colors="confettiColors"
-      :amount="announcement.kind === 'bingo' ? 220 : 120"
-      :duration="announcement.kind === 'bingo' ? 6000 : 4000"
+      :amount="120"
+      :duration="4000"
     />
 
     <div role="alert" class="announce__content">
@@ -133,8 +145,40 @@ onKeyStroke('Escape', () => emit('dismiss'))
 
 .announce--bingo .announce__title {
   animation:
-    announce-pop 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both,
-    announce-pulse 1.6s ease-in-out 0.9s infinite;
+    announce-slam 0.75s cubic-bezier(0.3, 0, 0.2, 1) both,
+    announce-pulse 1.6s ease-in-out 1.4s infinite;
+}
+
+/* The whole block shakes when the title lands. */
+.announce--bingo .announce__content {
+  animation: announce-shake 0.5s ease-out 0.45s both;
+}
+
+/* Light rays of the set colour turning slowly behind the title. Browsers
+   without conic gradients (old smart TVs) simply skip them. */
+.announce__rays {
+  display: none;
+}
+
+@supports (background: conic-gradient(red, blue)) {
+  .announce__rays {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    display: block;
+    width: 160vmax;
+    height: 160vmax;
+    margin: -80vmax 0 0 -80vmax;
+    border-radius: 9999px;
+    background: repeating-conic-gradient(var(--c) 0deg 7deg, transparent 7deg 22.5deg);
+    -webkit-mask-image: radial-gradient(closest-side, #000 8%, transparent 70%);
+    mask-image: radial-gradient(closest-side, #000 8%, transparent 70%);
+    opacity: 0;
+    pointer-events: none;
+    animation:
+      announce-rays-in 1.2s ease-out 0.3s forwards,
+      announce-spin 40s linear infinite;
+  }
 }
 
 .announce__card {
@@ -243,6 +287,54 @@ onKeyStroke('Escape', () => emit('dismiss'))
   }
 }
 
+@keyframes announce-slam {
+  0% {
+    opacity: 0;
+    transform: scale(3.2);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes announce-shake {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  20% {
+    transform: translate(-1.2vmin, 0.6vmin);
+  }
+  40% {
+    transform: translate(1vmin, -0.8vmin);
+  }
+  60% {
+    transform: translate(-0.6vmin, 0.4vmin);
+  }
+  80% {
+    transform: translate(0.3vmin, -0.2vmin);
+  }
+}
+
+@keyframes announce-rays-in {
+  to {
+    opacity: 0.22;
+  }
+}
+
+@keyframes announce-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes announce-pulse {
   50% {
     transform: scale(1.05);
@@ -259,10 +351,16 @@ onKeyStroke('Escape', () => emit('dismiss'))
 @media (prefers-reduced-motion: reduce) {
   .announce__title,
   .announce--bingo .announce__title,
+  .announce--bingo .announce__content,
   .announce__card,
   .announce__note,
   .announce__icon,
   .announce__message {
+    animation: none;
+  }
+
+  .announce__rays {
+    opacity: 0.22;
     animation: none;
   }
 }

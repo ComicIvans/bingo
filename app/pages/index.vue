@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { DEFAULT_SETTINGS } from '#shared/types/api'
-import type { Announcement } from '#shared/types/api'
+import type { Announcement, DrawnItem } from '#shared/types/api'
 
 // Public screen for a projector or a TV. It keeps its own theme (the
 // publicTheme setting) whatever colour mode the rest of the site uses.
@@ -63,15 +63,32 @@ const logoAlt = computed(() => (settings.value.title.trim() ? '' : 'Logo del bin
 // ─── Draw animation ────────────────────────────────────────────────────────
 
 const ballWrap = useTemplateRef<HTMLElement>('ballWrap')
+const leaveWrap = useTemplateRef<HTMLElement>('leaveWrap')
 const burst = useTemplateRef<HTMLElement>('burst')
 const { width: ballSize } = useElementSize(ballWrap)
 const recentMax = computed(() => (ballSize.value ? ballSize.value * 0.45 : Infinity))
 
-function animateDraw() {
+/** The previous ball while it rolls away to make room for the new one. */
+const leaving = ref<DrawnItem | null>(null)
+let leaveAnimation: Animation | null = null
+
+/** The previous ball leaves first; the new one comes in as it is nearly gone. */
+const LEAVE_MS = 650
+const ENTER_DELAY_MS = 450
+
+const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+function animateEnter(delay: number) {
   const ball = ballWrap.value
   if (!ball || typeof ball.animate !== 'function') return
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    ball.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 350, easing: 'ease-out' })
+  // `backwards` keeps the new ball hidden at its first keyframe while it waits.
+  if (reducedMotion()) {
+    ball.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: 350,
+      delay: delay ? 150 : 0,
+      easing: 'ease-out',
+      fill: 'backwards',
+    })
     return
   }
   ball.animate(
@@ -80,7 +97,7 @@ function animateDraw() {
       { transform: 'translateX(3%) rotate(10deg) scale(1.06)', opacity: 1, offset: 0.72 },
       { transform: 'translateX(0) rotate(0) scale(1)', opacity: 1 },
     ],
-    { duration: 1100, easing: 'cubic-bezier(0.22, 0.9, 0.3, 1)' }
+    { duration: 1100, delay, easing: 'cubic-bezier(0.22, 0.9, 0.3, 1)', fill: 'backwards' }
   )
   burst.value?.animate(
     [
@@ -88,8 +105,42 @@ function animateDraw() {
       { transform: 'scale(1)', opacity: 0.55, offset: 0.55 },
       { transform: 'scale(1.6)', opacity: 0 },
     ],
-    { duration: 1500, easing: 'ease-out' }
+    { duration: 1500, delay, easing: 'ease-out', fill: 'backwards' }
   )
+}
+
+/**
+ * Rolls the previous ball away towards the previous draws: to the right on
+ * wide screens, down on tall ones, where the list sits under the ball.
+ */
+async function animateLeave(item: DrawnItem) {
+  leaveAnimation?.cancel()
+  leaving.value = item
+  await nextTick()
+  const ball = leaveWrap.value
+  if (!ball || typeof ball.animate !== 'function') {
+    leaving.value = null
+    return
+  }
+  const wide = window.matchMedia('(min-aspect-ratio: 5/4)').matches
+  const away = wide ? 'translateX(55vw)' : 'translateY(45vh)'
+  const animation = reducedMotion()
+    ? ball.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 200, easing: 'ease-out' })
+    : ball.animate(
+        [
+          { transform: 'translate(0, 0) rotate(0) scale(1)', opacity: 1 },
+          // A little wind-up backwards before it rolls off.
+          { transform: 'translate(-4%, 0) rotate(-12deg) scale(1.02)', opacity: 1, offset: 0.2 },
+          { transform: `${away} rotate(480deg) scale(0.35)`, opacity: 0 },
+        ],
+        { duration: LEAVE_MS, easing: 'cubic-bezier(0.5, 0, 0.75, 0.4)' }
+      )
+  leaveAnimation = animation
+  animation.onfinish = animation.oncancel = () => {
+    if (leaveAnimation !== animation) return
+    leaveAnimation = null
+    leaving.value = null
+  }
 }
 
 // Only a real new draw animates: not the first render, an undo, a new game
@@ -98,7 +149,10 @@ watch(
   () => ({ id: game.value?.id, count: draws.value.length, last: current.value?.index }),
   (next, prev) => {
     if (next.id !== prev.id || next.count <= prev.count || next.last === prev.last) return
-    animateDraw()
+    const previous = draws.value.at(-2)
+    const leaves = !!previous && previous.index === prev.last
+    if (leaves) void animateLeave(previous)
+    animateEnter(leaves ? ENTER_DELAY_MS : 0)
   },
   { flush: 'post' }
 )
@@ -213,6 +267,9 @@ useHead({ bodyAttrs: { class: 'overflow-hidden' } })
 
           <div class="stage__ball">
             <div ref="burst" class="stage__burst" aria-hidden="true" />
+            <div v-if="leaving" ref="leaveWrap" class="stage__ball-leave" aria-hidden="true">
+              <LiveBall :item="leaving" :color="accent" :display="display" :min-font="14" />
+            </div>
             <div
               ref="ballWrap"
               class="stage__ball-wrap"
@@ -286,6 +343,7 @@ useHead({ bodyAttrs: { class: 'overflow-hidden' } })
         :announcement="overlay"
         :color="accent"
         :controls-visible="!idle"
+        :dark="theme === 'dark'"
         @dismiss="dismissAnnouncement"
       />
     </Transition>
@@ -545,6 +603,21 @@ useHead({ bodyAttrs: { class: 'overflow-hidden' } })
 /* Waiting for the first draw: the empty ball floats gently. */
 .stage__ball-wrap--idle {
   animation: ball-float 3.2s ease-in-out infinite;
+}
+
+.stage__ball-leave {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* The new ball rolls in over the one that leaves. */
+.stage__ball-wrap {
+  z-index: 2;
 }
 
 .stage__burst {
