@@ -10,6 +10,7 @@ export default defineEventHandler(async (event): Promise<Settings> => {
     if (body.subtitle !== undefined) settings.subtitle = body.subtitle
     if (body.publicTheme !== undefined) settings.publicTheme = body.publicTheme
     if (body.recentCount !== undefined) settings.recentCount = body.recentCount
+    if (body.boardCheck !== undefined) settings.boardCheck = body.boardCheck
     await writeSettings(settings)
     return settings
   })

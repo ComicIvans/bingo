@@ -270,6 +270,15 @@ async function announce(kind: 'line' | 'bingo') {
               title="El cartón es de otro conjunto"
               :description="`Este cartón es del conjunto «${result.batch.setName}», que no es el de la partida, así que la comprobación no es válida.`"
             />
+            <!-- Still checkable (same set), but nobody said these cards were handed out. -->
+            <UAlert
+              v-else-if="result.batchInPlay === false"
+              color="warning"
+              variant="subtle"
+              icon="i-lucide-triangle-alert"
+              title="El lote de este cartón no está en juego"
+              :description="`El lote ${result.batch.id} no está entre los lotes de esta partida. Puede ser un cartón de otro evento; si de verdad se ha repartido, añádelo en «Lotes en juego» de la partida.`"
+            />
 
             <PanelCardGrid :cells="result.cells" :labels="result.labels" :check="result.check" />
 

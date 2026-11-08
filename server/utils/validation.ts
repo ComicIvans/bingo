@@ -119,6 +119,17 @@ export const loginSchema = z.object({
 
 // ─── Game ──────────────────────────────────────────────────────────────────
 
+const batchIdsSchema = z
+  .array(
+    z
+      .string({ error: 'Cada lote se indica por su código.' })
+      .trim()
+      .toUpperCase()
+      .regex(BATCH_ID_PATTERN, 'Los códigos de lote tienen 4 caracteres, por ejemplo K3F9.'),
+    { error: 'Indica los lotes en juego como una lista.' }
+  )
+  .max(50, 'No puede haber más de 50 lotes en juego.')
+
 export const startGameSchema = z.object({
   name: gameNameSchema,
   setId: z
@@ -127,11 +138,13 @@ export const startGameSchema = z.object({
     .min(1, 'Elige el conjunto de la partida.'),
   publicDisplay: publicDisplaySchema.optional(),
   force: z.boolean().optional(),
+  batchIds: batchIdsSchema.optional(),
 })
 
 export const updateGameSchema = z.object({
   name: gameNameSchema.optional(),
   publicDisplay: publicDisplaySchema.optional(),
+  batchIds: batchIdsSchema.optional(),
 })
 
 export const drawSchema = z.object({
@@ -208,6 +221,9 @@ export const settingsSchema = z.object({
     .int('Los elementos recientes deben ser un número entero.')
     .min(0, 'Los elementos recientes deben estar entre 0 y 20.')
     .max(20, 'Los elementos recientes deben estar entre 0 y 20.')
+    .optional(),
+  boardCheck: z
+    .boolean({ error: 'Indica si se pueden comprobar cartones desde el tablero.' })
     .optional(),
 })
 

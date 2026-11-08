@@ -15,6 +15,8 @@
 //                             LiveState as JSON on connect and after every
 //                             change; `event: ping` every 20 s.
 //   POST   /api/game/start    (admin) StartGameBody           → LiveState  (409 if a game is running and !force)
+//                             Batches in play: the given ones (all of the game's
+//                             set, else 400) or, when omitted, defaultBatchIds().
 //   PATCH  /api/game          (admin) UpdateGameBody          → LiveState
 //   POST   /api/game/draw     (admin) DrawBody                → DrawResult (409 when no game, all drawn, or index already drawn)
 //   POST   /api/game/undo     (admin)                         → LiveState  (removes the last draw)
@@ -54,6 +56,10 @@
 //   GET    /api/check?code=K3F9-042[&gameId=…] (admin)        → CardCheckResult
 //                             Checks against the given game, or the current
 //                             live game when omitted.
+//   GET    /api/board/check?code=K3F9-042                    → BoardCheckResult
+//                             For the volunteers' board, without a session:
+//                             only against the current game and only cards of
+//                             its set; 403 when Settings.boardCheck is off.
 //
 // Errors use h3's createError with a Spanish `statusMessage` the UI shows as is.
 
@@ -79,6 +85,8 @@ export interface Settings {
   publicTheme: 'dark' | 'light'
   /** Previous items listed on the public screen. */
   recentCount: number
+  /** Volunteers can check cards from the board (/tablero) without the panel key. */
+  boardCheck: boolean
   /** Bumped on every logo upload or reset, to bust caches. */
   logoVersion: number
   /** A logo was uploaded for light backgrounds (also used on the cards). */
@@ -87,13 +95,17 @@ export interface Settings {
   hasCustomDarkLogo: boolean
 }
 
-export type SettingsBody = Pick<Settings, 'title' | 'subtitle' | 'publicTheme' | 'recentCount'>
+export type SettingsBody = Pick<
+  Settings,
+  'title' | 'subtitle' | 'publicTheme' | 'recentCount' | 'boardCheck'
+>
 
 export const DEFAULT_SETTINGS: Settings = {
   title: 'Bingo',
   subtitle: '',
   publicTheme: 'dark',
   recentCount: 8,
+  boardCheck: true,
   logoVersion: 0,
   hasCustomLogo: false,
   hasCustomDarkLogo: false,
@@ -119,6 +131,14 @@ export interface Announcement {
   at: string
 }
 
+/** A card batch in play in a game, copied when chosen (it survives the batch's deletion). */
+export interface GameBatch {
+  id: string
+  name: string
+  firstNumber: number
+  lastNumber: number
+}
+
 export interface GameRecord {
   id: string
   name: string
@@ -131,6 +151,8 @@ export interface GameRecord {
   draws: GameDraw[]
   /** Every announcement made during the game (also the winners log). */
   announcements: Announcement[]
+  /** Card batches in play; missing in games from before batches were tracked. */
+  batches?: GameBatch[]
 }
 
 export interface GameSummary {
@@ -146,6 +168,8 @@ export interface GameSummary {
   total: number
   lines: number
   bingos: number
+  /** Ids of the batches in play. */
+  batchIds: string[]
 }
 
 export interface StartGameBody {
@@ -155,11 +179,14 @@ export interface StartGameBody {
   publicDisplay?: PublicDisplay
   /** Finish the running game first instead of answering 409. */
   force?: boolean
+  /** Ids of the card batches in play, all of the game's set. Omitted: the default ones. */
+  batchIds?: string[]
 }
 
 export interface UpdateGameBody {
   name?: string
   publicDisplay?: PublicDisplay
+  batchIds?: string[]
 }
 
 export interface DrawBody {
@@ -195,6 +222,8 @@ export interface LiveGame {
   items: BingoItem[]
   /** Drawn items in draw order (last = most recent). */
   draws: DrawnItem[]
+  /** Card batches in play (empty when none were chosen). */
+  batches: GameBatch[]
 }
 
 export interface LiveState {
@@ -271,4 +300,18 @@ export interface CardCheckResult {
   game: { id: string; name: string; setId: string; drawCount: number } | null
   /** The batch's set is not the game's set (the check is meaningless). */
   setMismatch: boolean
+  /** The batch is in play in the game; null when the game lists no batches. */
+  batchInPlay: boolean | null
+}
+
+/** A card checked from the board: only what the volunteers need. */
+export interface BoardCheckResult {
+  code: string
+  number: number
+  cells: number[][]
+  labels: Record<number, string>
+  check: CardCheck
+  /** The batch is in play in the game; null when the game lists no batches. */
+  batchInPlay: boolean | null
+  game: { name: string; drawCount: number }
 }

@@ -8,7 +8,8 @@ import {
   type CardFormat,
   type GeneratedCard,
 } from '#shared/cards/grid'
-import type { CardBatch, CardBatchSummary } from '#shared/types/api'
+import { defaultBatchIds } from '#shared/cards/inPlay'
+import type { CardBatch, CardBatchSummary, GameBatch } from '#shared/types/api'
 
 export function summarizeBatch(batch: CardBatch): CardBatchSummary {
   return {
@@ -21,6 +22,44 @@ export function summarizeBatch(batch: CardBatch): CardBatchSummary {
     count: batch.count,
     firstNumber: batch.firstNumber,
   }
+}
+
+function toGameBatch(batch: CardBatch): GameBatch {
+  return {
+    id: batch.id,
+    name: batch.name,
+    firstNumber: batch.firstNumber,
+    lastNumber: batch.firstNumber + batch.count - 1,
+  }
+}
+
+/**
+ * Batches in play for a game of `setId`: the given ids, which must all be
+ * batches of that set (else a 400), or the default ones when omitted.
+ */
+export async function resolveGameBatches(
+  setId: string,
+  ids: readonly string[] | undefined
+): Promise<GameBatch[]> {
+  const batches = await listBatches()
+  if (ids === undefined) {
+    const games = (await listGames()).map((game) => ({
+      setId: game.set.id,
+      startedAt: game.startedAt,
+      batchIds: (game.batches ?? []).map((batch) => batch.id),
+    }))
+    ids = defaultBatchIds(setId, batches, games)
+  }
+  const byId = new Map(batches.map((batch) => [batch.id, batch]))
+  const chosen: GameBatch[] = []
+  for (const id of new Set(ids)) {
+    const batch = byId.get(id)
+    if (!batch) throw apiError(400, `No existe ningún lote con el código ${id}.`)
+    if (batch.setId !== setId)
+      throw apiError(400, `El lote ${id} es del conjunto «${batch.setName}», no del de la partida.`)
+    chosen.push(toGameBatch(batch))
+  }
+  return chosen
 }
 
 /** Throws a 400 when the format cannot make cards from `itemCount` items. */

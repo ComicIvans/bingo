@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import { defaultBatchIds } from '#shared/cards/inPlay'
 import type { PublicDisplay } from '#shared/types/bingo'
 
 const admin = useAdmin()
 const toast = useToast()
 
 const { data: sets, status } = await useAsyncData('panel-sets', () => admin.sets())
+// For the batches in play: the batches, and past games to pick the default ones.
+const { data: batches } = await useAsyncData('start-batches', () => admin.batches())
+const { data: history } = await useAsyncData('start-history', () => admin.history())
 
 const schema = z.object({
   name: z
@@ -19,11 +23,41 @@ const schema = z.object({
 })
 type Schema = z.output<typeof schema>
 
-const form = reactive<{ name: string; setId: string | undefined; publicDisplay: PublicDisplay }>({
+const form = reactive<{
+  name: string
+  setId: string | undefined
+  publicDisplay: PublicDisplay
+  batchIds: string[]
+}>({
   name: `Partida del ${formatPanelLongDate()}`,
   setId: undefined,
   publicDisplay: 'label',
+  batchIds: [],
 })
+
+/** Only batches of the chosen set can be in play. */
+const batchItems = computed(() =>
+  (batches.value ?? [])
+    .filter((batch) => batch.setId === form.setId)
+    .map((batch) => ({
+      value: batch.id,
+      label: `${batch.id} · ${batch.name}`,
+      description: `Cartones del ${batch.firstNumber} al ${batch.firstNumber + batch.count - 1}`,
+    }))
+)
+
+function defaultBatches(setId: string | undefined): string[] {
+  if (!setId) return []
+  return defaultBatchIds(
+    setId,
+    batches.value ?? [],
+    (history.value ?? []).map((game) => ({
+      setId: game.setId,
+      startedAt: game.startedAt,
+      batchIds: game.batchIds ?? [],
+    }))
+  )
+}
 
 const setItems = computed(() =>
   (sets.value ?? []).map((set) => ({
@@ -49,15 +83,19 @@ watch(
   (id) => {
     const set = sets.value?.find((s) => s.id === id)
     if (set) form.publicDisplay = set.publicDisplay
+    // Batches of another set are never kept.
+    form.batchIds = defaultBatches(id)
   },
   { immediate: true }
 )
+watch([batches, history], () => (form.batchIds = defaultBatches(form.setId)))
 
 async function start(event: FormSubmitEvent<Schema>) {
   const state = await admin.startGame({
     name: event.data.name,
     setId: event.data.setId,
     publicDisplay: event.data.publicDisplay,
+    batchIds: form.batchIds,
   })
   if (state)
     toast.add({
@@ -124,6 +162,31 @@ async function start(event: FormSubmitEvent<Schema>) {
             <span v-if="item.description" class="line-clamp-1"> · {{ item.description }}</span>
           </template>
         </URadioGroup>
+      </UFormField>
+
+      <UFormField
+        name="batchIds"
+        label="Lotes en juego"
+        :help="
+          batchItems.length
+            ? 'Los cartones que hay en la sala. Los voluntarios solo tendrán que escribir el número del cartón.'
+            : undefined
+        "
+      >
+        <USelectMenu
+          v-if="batchItems.length"
+          v-model="form.batchIds"
+          :items="batchItems"
+          value-key="value"
+          multiple
+          placeholder="Ningún lote"
+          :search-input="false"
+          class="w-full"
+        />
+        <p v-else class="text-sm text-muted">
+          Este conjunto no tiene lotes. Se registran al descargar los cartones en PDF desde el
+          generador.
+        </p>
       </UFormField>
 
       <UFormField name="publicDisplay">

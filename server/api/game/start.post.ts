@@ -20,6 +20,7 @@ export default defineEventHandler(async (event): Promise<LiveState> => {
       await writeGame({ ...current, status: 'finished', finishedAt: now })
     }
 
+    const batches = await resolveGameBatches(set.id, body.batchIds)
     const game: GameRecord = {
       id: newGameId(),
       name: body.name,
@@ -36,6 +37,7 @@ export default defineEventHandler(async (event): Promise<LiveState> => {
       finishedAt: null,
       draws: [],
       announcements: [],
+      batches,
     }
     await writeGame(game)
     await writeCurrentGameId(game.id)

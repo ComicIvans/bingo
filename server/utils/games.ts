@@ -20,6 +20,7 @@ export function summarizeGame(game: GameRecord): GameSummary {
     total: game.set.items.length,
     lines: game.announcements.filter((a) => a.kind === 'line').length,
     bingos: game.announcements.filter((a) => a.kind === 'bingo').length,
+    batchIds: (game.batches ?? []).map((batch) => batch.id),
   }
 }
 
@@ -41,6 +42,7 @@ export function toLiveGame(game: GameRecord): LiveGame {
       const item = byIndex.get(draw.index)
       return item ? [{ ...item, at: draw.at }] : []
     }),
+    batches: game.batches ?? [],
   }
 }
 

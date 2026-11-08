@@ -34,6 +34,9 @@ const notice = computed(() => {
   }
 })
 
+// Volunteers check cards from here unless the panel turned it off.
+const canCheck = computed(() => !!game.value && settings.value.boardCheck !== false)
+
 const progress = computed(() =>
   total.value ? Math.min(100, (draws.value.length / total.value) * 100) : 0
 )
@@ -219,7 +222,7 @@ useSeoMeta({ title: () => withEventTitle('Tablero', settings.value.title) })
       </div>
     </header>
 
-    <main class="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+    <main class="mx-auto max-w-7xl px-4 py-4 sm:px-6" :class="{ 'pb-28': canCheck }">
       <template v-if="game">
         <UAlert
           v-if="notice"
@@ -363,9 +366,16 @@ useSeoMeta({ title: () => withEventTitle('Tablero', settings.value.title) })
       />
     </main>
 
+    <BoardCardCheck
+      v-if="canCheck && game"
+      :batches="game.batches ?? []"
+      :draw-count="draws.length"
+    />
+
     <LiveConnectionStatus
       :connected="connected"
-      class="fixed bottom-4 left-1/2 z-30 -translate-x-1/2"
+      class="fixed left-1/2 z-40 -translate-x-1/2"
+      :class="canCheck ? 'bottom-24' : 'bottom-4'"
     />
   </div>
 </template>

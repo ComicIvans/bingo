@@ -89,6 +89,36 @@ const publicDisplay = computed<PublicDisplay>({
   },
 })
 
+// ─── Batches in play ───────────────────────────────────────────────────────
+
+// Only batches of the game's set can be in play (the server checks it too).
+const { data: allBatches } = useLazyAsyncData('game-batches', () => admin.batches(), {
+  server: false,
+})
+const batchItems = computed(() =>
+  (allBatches.value ?? [])
+    .filter((batch) => batch.setId === game.value?.setId)
+    .map((batch) => ({
+      value: batch.id,
+      label: batch.id,
+      description: `${batch.name} · del ${batch.firstNumber} al ${batch.firstNumber + batch.count - 1}`,
+    }))
+)
+const gameBatchIds = computed(() => (game.value?.batches ?? []).map((batch) => batch.id))
+
+// Edited in a draft and saved when the menu closes, so ticking several
+// batches is a single change.
+const batchDraft = ref<string[]>([])
+watch(gameBatchIds, (ids) => (batchDraft.value = [...ids]), { immediate: true })
+
+async function saveBatches(open: boolean) {
+  if (open) return
+  const next = [...batchDraft.value].sort()
+  const current = [...gameBatchIds.value].sort()
+  if (next.join() === current.join()) return
+  if (!(await admin.updateGame({ batchIds: next }))) batchDraft.value = [...gameBatchIds.value]
+}
+
 // ─── Rename ────────────────────────────────────────────────────────────────
 
 const renameOpen = ref(false)
@@ -254,6 +284,22 @@ useEventListener('keyup', (event: KeyboardEvent) => {
             </p>
           </div>
           <div class="flex flex-wrap items-end gap-2">
+            <UFormField label="Lotes en juego" size="sm" class="min-w-36">
+              <USelectMenu
+                v-model="batchDraft"
+                :items="batchItems"
+                value-key="value"
+                multiple
+                :search-input="false"
+                placeholder="Ninguno"
+                :disabled="admin.pending.value"
+                class="w-full max-w-56"
+                aria-label="Lotes de cartones en juego"
+                @update:open="saveBatches"
+              >
+                <template #empty>Este conjunto no tiene lotes.</template>
+              </USelectMenu>
+            </UFormField>
             <UFormField label="Pantalla pública" size="sm" class="min-w-36">
               <USelect
                 v-model="publicDisplay"

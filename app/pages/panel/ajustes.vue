@@ -75,6 +75,25 @@ function resetForm() {
   })
 }
 
+// ─── Board ─────────────────────────────────────────────────────────────────
+
+// Saved as soon as it changes: a single switch needs no save button.
+const boardCheck = computed({
+  get: () => source.value.boardCheck,
+  set: async (value: boolean) => {
+    const saved = await admin.updateSettings({ boardCheck: value })
+    if (!saved) return
+    settings.value = saved
+    toast.add({
+      title: value
+        ? 'Los voluntarios ya pueden comprobar cartones'
+        : 'Comprobación desde el tablero desactivada',
+      color: 'success',
+      icon: 'i-lucide-check',
+    })
+  },
+})
+
 // ─── Logo ──────────────────────────────────────────────────────────────────
 
 const LOGO_TYPES: Record<string, string> = {
@@ -306,6 +325,21 @@ async function resetLogo(slot: LogoSlot) {
               />
             </div>
           </UForm>
+        </UCard>
+
+        <UCard>
+          <template #header>
+            <h2 class="font-semibold text-highlighted">Tablero de voluntarios</h2>
+            <p class="text-sm text-muted">
+              La página /tablero, que se abre desde el móvil para seguir la partida.
+            </p>
+          </template>
+          <USwitch
+            v-model="boardCheck"
+            :disabled="admin.pending.value"
+            label="Permitir comprobar cartones desde el tablero"
+            description="Sin la clave del panel: solo enseña el cartón y si tiene línea o bingo, contra la partida en curso y sus lotes. Anunciar sigue siendo cosa del panel."
+          />
         </UCard>
 
         <UCard :ui="{ body: 'space-y-5' }">
