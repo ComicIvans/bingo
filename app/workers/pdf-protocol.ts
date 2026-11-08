@@ -8,6 +8,8 @@ import type { PdfImageAsset } from '#shared/cards/pdf'
 export interface PdfJobRequest {
   design: CardDesign
   spec: GridSpec
+  /** Generator version (ENGINE_VERSION when the snapshot was taken). */
+  engine: number
   seed: string
   /** Item indices of the set, in order. */
   indices: number[]

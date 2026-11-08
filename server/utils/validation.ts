@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { H3Event } from 'h3'
+import { ENGINE_VERSIONS } from '#shared/cards/grid'
 
 // Request validation. Schemas carry their own Spanish messages for the
 // errors people can actually make; anything else (a malformed request) falls
@@ -26,6 +27,7 @@ const FIELD_NAMES: Record<string, string> = {
   label: 'etiqueta',
   id: 'código',
   seed: 'semilla',
+  engineVersion: 'versión del generador',
   format: 'formato',
   rows: 'filas',
   cols: 'columnas',
@@ -265,6 +267,16 @@ const seedSchema = z
   .min(16, 'La semilla del lote debe tener entre 16 y 128 caracteres.')
   .max(128, 'La semilla del lote debe tener entre 16 y 128 caracteres.')
 
+// Missing means 1: batches and files from before versions existed.
+const engineVersionSchema = z
+  .number({ error: 'La versión del generador debe ser un número.' })
+  .int('La versión del generador debe ser un número entero.')
+  .refine(
+    (version) => ENGINE_VERSIONS.includes(version),
+    'Los cartones se generaron con una versión del generador que este servidor no conoce. Actualiza la aplicación.'
+  )
+  .default(1)
+
 const countSchema = z
   .number({ error: 'El número de cartones debe ser un número.' })
   .int('El número de cartones debe ser un número entero.')
@@ -329,6 +341,7 @@ export const registerBatchSchema = z
       )
       .default(''),
     seed: seedSchema,
+    engineVersion: engineVersionSchema,
     format: cardFormatSchema,
     setId: z
       .string({ error: 'Falta el conjunto del lote.' })
@@ -368,6 +381,7 @@ export const importBatchSchema = z
       )
       .transform((value) => new Date(value).toISOString()),
     seed: seedSchema,
+    engineVersion: engineVersionSchema,
     format: cardFormatSchema,
     setId: z
       .string({ error: 'Falta el conjunto del lote.' })

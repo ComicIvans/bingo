@@ -10,7 +10,13 @@ import * as mupdf from 'mupdf'
 import { BUILTIN_SETS } from '../shared/data/builtin-sets.ts'
 import { FALLBACK_FONT_IDS, FALLBACK_FONT_IDS_BOLD, FONTS } from '../shared/fonts.ts'
 import { defaultDesign, type CardDesign } from '../shared/cards/design.ts'
-import { cardCode, generateBatch, gridSpecFor, type CardFormat } from '../shared/cards/grid.ts'
+import {
+  ENGINE_VERSION,
+  cardCode,
+  generateBatch,
+  gridSpecFor,
+  type CardFormat,
+} from '../shared/cards/grid.ts'
 import { DEFAULT_SHEET, type SheetOptions } from '../shared/cards/impose.ts'
 import { renderPdf, type PdfImageAsset } from '../shared/cards/pdf.ts'
 import { TextEngine, fontWeight } from '../shared/cards/text.ts'
@@ -48,6 +54,7 @@ async function sample(
   const set = BUILTIN_SETS.find((s) => s.id === setId)!
   const spec = gridSpecFor(format)
   const cards = generateBatch({
+    engine: ENGINE_VERSION,
     seed: `sample-${name}`,
     spec,
     indices: set.items.map((i) => i.index),

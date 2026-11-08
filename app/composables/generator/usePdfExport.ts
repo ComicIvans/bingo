@@ -1,5 +1,11 @@
 import { usedImageIds, type CardDesign } from '#shared/cards/design'
-import { cardCode, generateBatch, type CardFormat, type GridSpec } from '#shared/cards/grid'
+import {
+  ENGINE_VERSION,
+  cardCode,
+  generateBatch,
+  type CardFormat,
+  type GridSpec,
+} from '#shared/cards/grid'
 import type { Imposition, SheetOptions } from '#shared/cards/impose'
 import { gridFontSize, layoutBack, layoutFront, type DrawOp } from '#shared/cards/layout'
 import type { PdfImageAsset } from '#shared/cards/pdf'
@@ -50,6 +56,8 @@ interface Snapshot {
   spec: GridSpec
   format: CardFormat
   set: ActiveSet
+  /** Generator version, fixed with the snapshot like everything else. */
+  engineVersion: number
   seed: string
   batchId: string
   batchName: string
@@ -72,7 +80,10 @@ function sameItems(a: readonly BingoItem[], b: readonly BingoItem[]): boolean {
   )
 }
 
-/** Identity of a registered batch, apart from its id. */
+/**
+ * Identity of a registered batch, apart from its id. It includes the
+ * generator version: after an update the same options make other cards.
+ */
 function registrationKey(
   seed: string,
   format: CardFormat,
@@ -82,6 +93,7 @@ function registrationKey(
 ): string {
   return hashString(
     JSON.stringify([
+      ENGINE_VERSION,
       seed,
       format,
       set?.id,
@@ -142,6 +154,7 @@ export function usePdfExport(source: ExportSource) {
       name: batchName(),
       createdAt: new Date().toISOString(),
       seed: o.seed,
+      engineVersion: ENGINE_VERSION,
       format: format.value,
       setId: set.id,
       setName: set.name,
@@ -217,6 +230,7 @@ export function usePdfExport(source: ExportSource) {
         id: snap.batchId,
         name: snap.batchName,
         seed: snap.seed,
+        engineVersion: snap.engineVersion,
         format: snap.format,
         setId: snap.set.id,
         count: snap.count,
@@ -274,6 +288,7 @@ export function usePdfExport(source: ExportSource) {
   /** Display lists of the first card, to know how large each image is drawn. */
   function sampleOps(snap: Snapshot): DrawOp[][] {
     const [card] = generateBatch({
+      engine: snap.engineVersion,
       seed: snap.seed,
       spec: snap.spec,
       indices: snap.set.items.map((item) => item.index),
@@ -369,6 +384,7 @@ export function usePdfExport(source: ExportSource) {
    */
   function checkFeasible(snap: Snapshot) {
     generateBatch({
+      engine: snap.engineVersion,
       seed: snap.seed,
       spec: snap.spec,
       indices: snap.set.items.map((item) => item.index),
@@ -393,6 +409,7 @@ export function usePdfExport(source: ExportSource) {
       spec: { ...spec.value },
       format: clone(format.value),
       set: clone(set),
+      engineVersion: ENGINE_VERSION,
       seed: o.seed,
       batchId: o.batchId,
       batchName: batchName(),
@@ -449,6 +466,7 @@ export function usePdfExport(source: ExportSource) {
           customFonts: {},
         },
         spec: snap.spec,
+        engine: snap.engineVersion,
         seed: snap.seed,
         indices: snap.set.items.map((item) => item.index),
         labels: snap.set.items.map((item) => [item.index, item.label]),

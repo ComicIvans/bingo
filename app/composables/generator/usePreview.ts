@@ -1,6 +1,12 @@
 import { useDebounceFn } from '@vueuse/core'
 import type { CardDesign } from '#shared/cards/design'
-import { cardCode, generateBatch, type GeneratedCard, type GridSpec } from '#shared/cards/grid'
+import {
+  ENGINE_VERSION,
+  cardCode,
+  generateBatch,
+  type GeneratedCard,
+  type GridSpec,
+} from '#shared/cards/grid'
 import { cropMarks, type Imposition, type Slot } from '#shared/cards/impose'
 import { gridFontSize, layoutBack, layoutFront, type DrawOp } from '#shared/cards/layout'
 import { escapeAttr, renderSvg, renderSvgBody } from '#shared/cards/svg'
@@ -29,7 +35,13 @@ function useCardCache() {
   let key = ''
   let cards: GeneratedCard[] = []
   return (params: Parameters<typeof generateBatch>[0]): GeneratedCard[] => {
-    const nextKey = JSON.stringify([params.seed, params.spec, params.indices, params.firstNumber])
+    const nextKey = JSON.stringify([
+      params.engine,
+      params.seed,
+      params.spec,
+      params.indices,
+      params.firstNumber,
+    ])
     if (nextKey !== key || cards.length < params.count) {
       cards = generateBatch(params)
       key = nextKey
@@ -108,6 +120,7 @@ export function usePreview(source: PreviewSource) {
           ? Math.min(o.count, imp.perPage)
           : 0
       const cards = cardsFor({
+        engine: ENGINE_VERSION,
         seed: o.seed,
         spec: spec.value,
         indices: set.map((item) => item.index),

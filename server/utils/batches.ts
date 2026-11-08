@@ -16,6 +16,7 @@ export function summarizeBatch(batch: CardBatch): CardBatchSummary {
     id: batch.id,
     name: batch.name,
     createdAt: batch.createdAt,
+    engineVersion: batch.engineVersion ?? 1,
     format: batch.format,
     setId: batch.setId,
     setName: batch.setName,
@@ -95,6 +96,7 @@ export function rebuildCard(batch: CardBatch, number: number): CardCells | null 
   const position = number - batch.firstNumber
   if (position < 0 || position >= batch.count) return null
   const params = {
+    engine: batch.engineVersion ?? 1,
     seed: batch.seed,
     spec: gridSpecFor(batch.format),
     indices: batch.items.map((item) => item.index),

@@ -5,9 +5,10 @@
 //   -1 -> free cell (the centre of a 75-ball card)
 //   n  -> the item whose `index` is n
 //
-// Generation is deterministic: the same seed, grid spec, item indices and
-// card number always give the same card. The server relies on this to check
-// a printed card from its batch.
+// Generation is deterministic: the same engine version, seed, grid spec,
+// item indices and card number always give the same card. The server relies
+// on this to check a printed card from its batch, so a batch keeps the engine
+// version it was printed with and old versions must never change.
 
 import { createRng, sample, shuffleInPlace, type Rng } from './random.ts'
 
@@ -237,7 +238,17 @@ export function cardSignature(cells: CardCells): string {
     .join(',')
 }
 
+/**
+ * Version of the generation algorithm used for new batches. Batches stored
+ * without a version were made with version 1. Changing what any existing
+ * version generates breaks the check of every card printed with it.
+ */
+export const ENGINE_VERSION = 1
+export const ENGINE_VERSIONS: readonly number[] = [1]
+
 export interface BatchParams {
+  /** Engine version the batch was (or will be) generated with. */
+  engine: number
   seed: string
   spec: GridSpec
   /** Item indices of the set the cards draw from. */
@@ -257,8 +268,10 @@ const ATTEMPTS_PER_CARD = 200
  * regenerating a prefix of the batch gives the same cards.
  */
 export function generateBatch(params: BatchParams): GeneratedCard[] {
-  const { seed, spec, indices, count } = params
+  const { engine, seed, spec, indices, count } = params
   const firstNumber = params.firstNumber ?? 1
+  if (!ENGINE_VERSIONS.includes(engine))
+    throw new CardGenerationError(`Versión del generador desconocida: ${engine}.`)
   const errors = validateSpec(spec, indices.length)
   if (errors.length) throw new CardGenerationError(errors[0])
 

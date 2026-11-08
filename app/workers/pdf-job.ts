@@ -23,6 +23,7 @@ export async function runPdfJob(
 
   onProgress('cards', 0, job.count)
   const cards = generateBatch({
+    engine: job.engine,
     seed: job.seed,
     spec: job.spec,
     indices: job.indices,

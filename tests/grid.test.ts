@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ENGINE_VERSION,
   EMPTY,
   FREE,
   cardCode,
@@ -103,7 +104,13 @@ describe('generateBatch', () => {
       const spec = gridSpecFor(format)
       const indices = range(size)
       for (let s = 0; s < 20; s++) {
-        const cards = generateBatch({ seed: `${name}-${s}`, spec, indices, count: 60 })
+        const cards = generateBatch({
+          engine: ENGINE_VERSION,
+          seed: `${name}-${s}`,
+          spec,
+          indices,
+          count: 60,
+        })
         expect(cards).toHaveLength(60)
         for (const card of cards) assertCardValid(card.cells, spec, indices)
         expect(new Set(cards.map((c) => cardSignature(c.cells))).size).toBe(60)
@@ -113,7 +120,13 @@ describe('generateBatch', () => {
 
   it('is deterministic and regenerates any card of a batch', () => {
     const spec = gridSpecFor({ kind: 'classic90' })
-    const params = { seed: 'abc', spec, indices: range(90), firstNumber: 5 }
+    const params = {
+      engine: ENGINE_VERSION,
+      seed: 'abc',
+      spec,
+      indices: range(90),
+      firstNumber: 5,
+    }
     const a = generateBatch({ ...params, count: 30 })
     const b = generateBatch({ ...params, count: 30 })
     expect(a).toEqual(b)
@@ -123,7 +136,13 @@ describe('generateBatch', () => {
 
   it('keeps the classic look: 15 items, at most 2 per column', () => {
     const spec = gridSpecFor({ kind: 'classic90' })
-    for (const card of generateBatch({ seed: 'x', spec, indices: range(90), count: 500 })) {
+    for (const card of generateBatch({
+      engine: ENGINE_VERSION,
+      seed: 'x',
+      spec,
+      indices: range(90),
+      count: 500,
+    })) {
       expect(card.cells.flat().filter((v) => v > 0)).toHaveLength(15)
     }
   })
@@ -138,9 +157,9 @@ describe('generateBatch', () => {
       columnOrder: false,
       freeCenter: false,
     })
-    expect(() => generateBatch({ seed: 's', spec, indices: range(5), count: 10 })).toThrow(
-      /distintos/
-    )
+    expect(() =>
+      generateBatch({ engine: ENGINE_VERSION, seed: 's', spec, indices: range(5), count: 10 })
+    ).toThrow(/distintos/)
   })
 
   it('rejects specs that need more items than the set has', () => {

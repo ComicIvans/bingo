@@ -264,6 +264,8 @@ export interface CardBatch {
   createdAt: string
   /** Secret: whoever has it can rebuild every card of the batch. */
   seed: string
+  /** Generator version the cards were made with (missing: 1). */
+  engineVersion?: number
   format: CardFormat
   setId: string
   setName: string
@@ -279,6 +281,8 @@ export interface RegisterBatchBody {
   id: string
   name: string
   seed: string
+  /** Generator version the cards were made with (missing: 1). */
+  engineVersion?: number
   format: CardFormat
   setId: string
   count: number

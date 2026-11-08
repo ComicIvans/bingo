@@ -45,6 +45,7 @@ export default defineEventHandler(async (event): Promise<CardBatchSummary> => {
       name: body.name || `Lote ${body.id}`,
       createdAt: new Date().toISOString(),
       seed: body.seed,
+      engineVersion: body.engineVersion,
       format: body.format,
       setId: body.setId,
       setName,
