@@ -3,6 +3,7 @@
 // field and the panel logo is always available.
 
 import {
+  BACK_CODE_POSITIONS,
   DESIGN_VERSION,
   SERVER_LOGO_ID,
   defaultDesign,
@@ -89,7 +90,12 @@ function slot(value: unknown, base: SlotContent, images: Record<string, DesignIm
     case 'code':
       return { type: 'code' }
     case 'text':
-      return { type: 'text', text: str(value.text, '', 300) }
+      return {
+        type: 'text',
+        text: str(value.text, '', 300),
+        ...(value.bold === true ? { bold: true } : {}),
+        ...(value.italic === true ? { italic: true } : {}),
+      }
     case 'image':
       return typeof value.imageId === 'string' && images[value.imageId]
         ? { type: 'image', imageId: value.imageId }
@@ -198,6 +204,9 @@ export function sanitizeDesign(raw: unknown, base: CardDesign = defaultDesign())
       text: str(b.text, base.back.text, 2000),
       textStyle: textStyle(b.textStyle, base.back.textStyle, fonts),
       showCode: bool(b.showCode, base.back.showCode),
+      codePosition: BACK_CODE_POSITIONS.includes(b.codePosition as never)
+        ? (b.codePosition as CardDesign['back']['codePosition'])
+        : base.back.codePosition,
       codeStyle: textStyle(b.codeStyle, base.back.codeStyle, fonts),
     },
     images: imgs,

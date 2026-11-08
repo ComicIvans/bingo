@@ -2,6 +2,7 @@
 // fonts and positions the PDF uses, so the preview matches the PDF without
 // depending on the browser's font loading or text layout.
 
+import { FAKE_BOLD_STROKE, ITALIC_SLANT, MM_PER_PT } from './design.ts'
 import { roundedRectPath } from './paths.ts'
 import type { Box, DrawOp } from './layout.ts'
 import type { TextEngine } from './text.ts'
@@ -70,11 +71,18 @@ export function renderSvgBody(ops: DrawOp[], engine: TextEngine, options: SvgOpt
         break
       case 'text': {
         let d = ''
+        const slant = op.italic ? ITALIC_SLANT : 0
         for (const run of op.runs) {
           const shaped = engine.shape(run.text, run.fontId, op.size)
-          d += engine.svgPath(shaped, op.x + run.dx, op.y)
+          d += engine.svgPath(shaped, op.x + run.dx, op.y, slant)
         }
-        if (d) out += `<path d="${d}" fill="${escapeAttr(op.color)}"/>`
+        if (!d) break
+        const color = escapeAttr(op.color)
+        // Round joins, or corners such as those of A, M or V grow spikes.
+        const outline = op.fakeBold
+          ? ` stroke="${color}" stroke-width="${n(FAKE_BOLD_STROKE * op.size * MM_PER_PT)}" stroke-linejoin="round"`
+          : ''
+        out += `<path d="${d}" fill="${color}"${outline}/>`
         break
       }
       case 'image': {

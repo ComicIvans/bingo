@@ -134,7 +134,7 @@ export function usePreview(source: PreviewSource) {
       const cardCodeText = cardCode(o.batchId, card.number, lastNumber)
       front.value = renderSvg(layoutCard(card), d.width, d.height, textEngine, {
         imageHref,
-        attrs: `role="img" aria-label="${escapeAttr(`Cara delantera del cartón ${cardCodeText}`)}"`,
+        attrs: `role="img" aria-label="${escapeAttr(`Anverso del cartón ${cardCodeText}`)}"`,
       })
       back.value = d.back.enabled
         ? renderSvg(layoutBack(d, cardCodeText, textEngine), d.width, d.height, textEngine, {
@@ -151,7 +151,7 @@ export function usePreview(source: PreviewSource) {
           first.map(layoutCard),
           textEngine,
           o.sheet.cropMarks,
-          'Primera página: caras delanteras'
+          'Primera página: anversos'
         )
         if (d.back.enabled) {
           const shared = d.back.showCode ? null : layoutBack(d, '', textEngine)

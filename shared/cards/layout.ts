@@ -2,7 +2,16 @@
 // images in millimetres, origin at the card's top-left corner. The SVG
 // preview and the PDF renderer both draw this same list.
 
-import type { BandDesign, CardDesign, SlotContent, TextStyle } from './design.ts'
+import {
+  FAKE_BOLD_STROKE,
+  ITALIC_SLANT,
+  MM_PER_PT,
+  slotTextFont,
+  type BandDesign,
+  type CardDesign,
+  type SlotContent,
+  type TextStyle,
+} from './design.ts'
 import { EMPTY, FREE, type CardCells, type GridSpec } from './grid.ts'
 import type { TextEngine } from './text.ts'
 
@@ -43,6 +52,10 @@ export type DrawOp =
       size: number
       color: string
       runs: TextRunOp[]
+      /** Synthetic italic: glyphs slanted by ITALIC_SLANT around the baseline. */
+      italic?: boolean
+      /** Synthetic bold: glyphs outlined in their colour (FAKE_BOLD_STROKE of the size). */
+      fakeBold?: boolean
     }
   | {
       op: 'image'
@@ -62,7 +75,8 @@ function textOp(
   style: TextStyle,
   size: number,
   x: number,
-  baseline: number
+  baseline: number,
+  effects: { italic?: boolean; fakeBold?: boolean } = {}
 ): DrawOp {
   const shaped = engine.shape(text, style.font, size)
   return {
@@ -72,6 +86,8 @@ function textOp(
     size,
     color: style.color,
     runs: shaped.runs.map((r) => ({ fontId: r.fontId, text: r.text, dx: r.dx })),
+    ...(effects.italic ? { italic: true } : {}),
+    ...(effects.fakeBold ? { fakeBold: true } : {}),
   }
 }
 
@@ -165,19 +181,30 @@ function planSlot(
   }
   const text = slot.type === 'code' ? code : slot.text
   if (!text.trim()) return null
-  const shaped = engine.shape(text, band.style.font, band.style.size)
+  const { fontId, fakeBold } = slotTextFont(band, slot)
+  const italic = slot.type === 'text' && !!slot.italic
+  const style: TextStyle = { ...band.style, font: fontId }
+  const shaped = engine.shape(text, fontId, style.size)
   // Shrink text that is taller than the band.
   const heightLimit = shaped.capHeight > 0 ? (box.h * 0.8) / shaped.capHeight : 1
-  const baseSize = band.style.size * Math.min(1, heightLimit)
-  const naturalWidth = shaped.width * (baseSize / band.style.size)
+  const baseSize = style.size * Math.min(1, heightLimit)
+  // Room for what the effects add beyond the advance width: the outline on
+  // both sides and the slant of the tallest letters.
+  const stroke = fakeBold ? FAKE_BOLD_STROKE * style.size * MM_PER_PT : 0
+  const extra = stroke + (italic ? shaped.capHeight * ITALIC_SLANT : 0)
+  const naturalWidth = (shaped.width + extra) * (baseSize / style.size)
   return {
     slot,
     width: naturalWidth,
     draw: (x, maxWidth) => {
-      const size = naturalWidth > maxWidth ? baseSize * (maxWidth / naturalWidth) : baseSize
-      const capHeight = shaped.capHeight * (size / band.style.size)
+      const factor = naturalWidth > maxWidth ? maxWidth / naturalWidth : 1
+      const size = baseSize * factor
+      const ratio = size / style.size
+      const capHeight = shaped.capHeight * ratio
       const baseline = box.y + box.h / 2 + capHeight / 2
-      return [textOp(engine, text, band.style, size, x, baseline)]
+      return [
+        textOp(engine, text, style, size, x + (stroke / 2) * ratio, baseline, { italic, fakeBold }),
+      ]
     },
   }
 }
@@ -471,6 +498,23 @@ export function layoutBack(design: CardDesign, code: string, engine: TextEngine)
         }),
     })
   }
+  const codeShaped =
+    b.showCode && code ? engine.shape(code, b.codeStyle.font, b.codeStyle.size) : null
+  if (codeShaped && b.codePosition === 'below')
+    blocks.push({
+      h: codeShaped.capHeight,
+      draw: (y) => [
+        textOp(
+          engine,
+          code,
+          b.codeStyle,
+          b.codeStyle.size,
+          content.x + (content.w - codeShaped.width) / 2,
+          y + codeShaped.capHeight
+        ),
+      ],
+    })
+
   const total =
     blocks.reduce((sum, block) => sum + block.h, 0) + gap * Math.max(0, blocks.length - 1)
   let y = content.y + Math.max(0, (content.h - total) / 2)
@@ -479,18 +523,16 @@ export function layoutBack(design: CardDesign, code: string, engine: TextEngine)
     y += block.h + gap
   }
 
-  if (b.showCode && code) {
-    const shaped = engine.shape(code, b.codeStyle.font, b.codeStyle.size)
-    ops.push(
-      textOp(
-        engine,
-        code,
-        b.codeStyle,
-        b.codeStyle.size,
-        content.x + content.w - shaped.width,
-        content.y + content.h
-      )
-    )
+  if (codeShaped && b.codePosition !== 'below') {
+    const [vertical, horizontal] = b.codePosition.split('-') as ['top' | 'bottom', string]
+    const x =
+      horizontal === 'left'
+        ? content.x
+        : horizontal === 'center'
+          ? content.x + (content.w - codeShaped.width) / 2
+          : content.x + content.w - codeShaped.width
+    const baseline = vertical === 'top' ? content.y + codeShaped.capHeight : content.y + content.h
+    ops.push(textOp(engine, code, b.codeStyle, b.codeStyle.size, x, baseline))
   }
 
   ops.push(...cardBorder(design))

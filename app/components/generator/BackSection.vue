@@ -1,13 +1,24 @@
 <script setup lang="ts">
 // Back of the card.
 
+import type { BackCodePosition } from '#shared/cards/design'
 import { useGenerator } from '~/composables/generator/useGenerator'
 
 const { design } = useGenerator()
 
 const FITS = [
-  { label: 'Cubrir todo el cartón', value: 'cover' },
-  { label: 'Ajustar dentro del margen', value: 'contain' },
+  { label: 'Cubrir todo el reverso (recorta lo que sobra)', value: 'cover' },
+  { label: 'Entera, dentro del margen', value: 'contain' },
+]
+
+const CODE_POSITIONS: { label: string; value: BackCodePosition }[] = [
+  { label: 'Arriba a la izquierda', value: 'top-left' },
+  { label: 'Arriba en el centro', value: 'top-center' },
+  { label: 'Arriba a la derecha', value: 'top-right' },
+  { label: 'Debajo del texto', value: 'below' },
+  { label: 'Abajo a la izquierda', value: 'bottom-left' },
+  { label: 'Abajo en el centro', value: 'bottom-center' },
+  { label: 'Abajo a la derecha', value: 'bottom-right' },
 ]
 </script>
 
@@ -16,12 +27,12 @@ const FITS = [
     <USwitch
       v-model="design.back.enabled"
       label="Imprimir reverso"
-      description="Cada folio de caras delanteras va seguido de otro con los reversos, listo para imprimir a doble cara."
+      description="Cada folio de anversos va seguido de otro con los reversos, listo para imprimir a doble cara."
     />
     <template v-if="design.back.enabled">
       <GeneratorColorField v-model="design.back.background" label="Fondo" />
       <div class="grid gap-3 sm:grid-cols-2">
-        <UFormField label="Imagen de fondo">
+        <UFormField label="Imagen de fondo" description="Va detrás del logo y los textos.">
           <GeneratorImageSelect v-model="design.back.imageId" allow-none />
         </UFormField>
         <UFormField v-if="design.back.imageId" label="Encaje de la imagen">
@@ -31,7 +42,7 @@ const FITS = [
 
       <USeparator label="Logo" />
       <div class="grid gap-3 sm:grid-cols-2">
-        <UFormField label="Logo">
+        <UFormField label="Logo" description="Centrado encima del título; aparte del fondo.">
           <GeneratorImageSelect v-model="design.back.logoId" allow-none />
         </UFormField>
         <GeneratorNumberField
@@ -69,11 +80,15 @@ const FITS = [
       />
 
       <USeparator label="Código" />
-      <USwitch
-        v-model="design.back.showCode"
-        label="Mostrar el código del cartón"
-        description="Se imprime en la esquina inferior derecha del reverso."
-      />
+      <USwitch v-model="design.back.showCode" label="Mostrar el código del cartón" />
+      <UFormField v-if="design.back.showCode" label="Posición del código">
+        <USelect
+          v-model="design.back.codePosition"
+          :items="CODE_POSITIONS"
+          value-key="value"
+          class="w-full"
+        />
+      </UFormField>
       <GeneratorTextStyleFields
         v-if="design.back.showCode"
         v-model="design.back.codeStyle"

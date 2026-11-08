@@ -7,8 +7,8 @@ import { randomCode } from '#shared/cards/random'
 import { useGenerator } from '~/composables/generator/useGenerator'
 import { removeCustomFontFromDesign } from '~/utils/generator/design'
 import { baseName, bytesToDataUrl, formatBytes, pickFile } from '~/utils/generator/files'
+import { useImageUpload } from '~/composables/generator/useImageUpload'
 import { isEmbeddableFont } from '~/utils/generator/fonts'
-import { IMAGE_ACCEPT } from '~/utils/generator/images'
 
 const { design, images, storageProblem } = useGenerator()
 const toast = useToast()
@@ -32,30 +32,10 @@ const fontList = computed(() =>
   }))
 )
 
-const uploading = ref(false)
+const { upload, uploading } = useImageUpload()
 
-async function uploadImage() {
-  const file = await pickFile(IMAGE_ACCEPT)
-  if (!file) return
-  uploading.value = true
-  try {
-    await images.add(file)
-    toast.add({
-      title: 'Imagen añadida',
-      description: 'Ya puedes elegirla en la cabecera, el pie, la casilla libre o el reverso.',
-      color: 'success',
-      icon: 'i-lucide-image-plus',
-    })
-  } catch (e) {
-    toast.add({
-      title: 'No se pudo añadir la imagen',
-      description: e instanceof Error ? e.message : undefined,
-      color: 'error',
-      icon: 'i-lucide-circle-x',
-    })
-  } finally {
-    uploading.value = false
-  }
+function uploadImage() {
+  void upload('Ya puedes elegirla en la cabecera, el pie, la casilla libre o el reverso.')
 }
 
 async function uploadFont() {

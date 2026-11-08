@@ -2,12 +2,21 @@
 // millimetres and font sizes in points. Designs are plain JSON so they can be
 // saved in the browser, exported and imported.
 
+import { boldFontId } from '../fonts.ts'
+
 export const DESIGN_VERSION = 1
 
 /** Content of a header/footer slot. */
 export type SlotContent =
   | { type: 'none' }
-  | { type: 'text'; text: string }
+  | {
+      type: 'text'
+      text: string
+      /** Bolder than the band's font. */
+      bold?: boolean
+      /** Slanted. */
+      italic?: boolean
+    }
   | { type: 'image'; imageId: string }
   /** The card code (`K3F9-042`). */
   | { type: 'code' }
@@ -52,6 +61,26 @@ export interface GridDesign {
   squareCells: boolean
 }
 
+/** Where the card code goes on the back: a corner or edge, or under the centred block. */
+export type BackCodePosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'below'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right'
+
+export const BACK_CODE_POSITIONS: readonly BackCodePosition[] = [
+  'top-left',
+  'top-center',
+  'top-right',
+  'below',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right',
+]
+
 export interface BackDesign {
   enabled: boolean
   background: string
@@ -66,6 +95,7 @@ export interface BackDesign {
   text: string
   textStyle: TextStyle
   showCode: boolean
+  codePosition: BackCodePosition
   codeStyle: TextStyle
 }
 
@@ -187,6 +217,7 @@ export function defaultDesign(options: { title?: string; accent?: string } = {})
       text: '¡Mucha suerte!',
       textStyle: { font: 'montserrat-500', size: 10, color: '#ffffff' },
       showCode: true,
+      codePosition: 'bottom-right',
       codeStyle: { font: 'roboto-mono-500', size: 7, color: '#ffffff' },
     },
     images: {
@@ -198,6 +229,27 @@ export function defaultDesign(options: { title?: string; accent?: string } = {})
       },
     },
   }
+}
+
+/** Slant of synthetic italics (tan 12°): x shift per unit of height. */
+export const ITALIC_SLANT = Math.tan((12 * Math.PI) / 180)
+
+/** Outline added around glyphs for synthetic bold, as a share of the font size. */
+export const FAKE_BOLD_STROKE = 0.04
+
+/**
+ * Font a text slot is drawn with. Bold switches to the bold weight of the
+ * band font's family; when there is none (the font is already bold, has a
+ * single weight or was uploaded) the glyphs get an outline instead.
+ */
+export function slotTextFont(
+  band: BandDesign,
+  slot: SlotContent
+): { fontId: string; fakeBold: boolean } {
+  const fontId = band.style.font
+  if (slot.type !== 'text' || !slot.bold) return { fontId, fakeBold: false }
+  const bold = boldFontId(fontId)
+  return bold ? { fontId: bold, fakeBold: false } : { fontId, fakeBold: true }
 }
 
 /** Ids of the images a design actually uses. */
@@ -221,6 +273,9 @@ export function usedFontIds(design: CardDesign): string[] {
     design.footer.style.font,
     design.grid.font,
   ])
+  for (const band of [design.header, design.footer])
+    for (const slot of [band.left, band.center, band.right])
+      if (slot.type === 'text') ids.add(slotTextFont(band, slot).fontId)
   if (design.back.enabled) {
     ids.add(design.back.titleStyle.font)
     ids.add(design.back.textStyle.font)

@@ -135,9 +135,9 @@ const marginMax = computed(() =>
         :ui="{ fieldset: 'grid gap-2 sm:grid-cols-2', legend: 'mb-2 text-sm font-medium' }"
       />
       <p v-if="design.back.enabled" class="-mt-2 text-xs text-muted">
-        Elige el mismo borde que en el diálogo de impresión. Cada folio lleva las caras delanteras
-        en una página y los reversos en la siguiente; los reversos se colocan en espejo para que
-        cada uno caiga justo detrás de su cartón.
+        Elige el mismo borde que en el diálogo de impresión. Cada folio lleva los anversos en una
+        página y los reversos en la siguiente; los reversos se colocan en espejo para que cada uno
+        caiga justo detrás de su cartón.
       </p>
 
       <USwitch
@@ -147,7 +147,7 @@ const marginMax = computed(() =>
       />
     </template>
     <p v-else-if="design.back.enabled" class="text-xs text-muted">
-      Cada cartón ocupa dos páginas seguidas: la cara delantera y el reverso.
+      Cada cartón ocupa dos páginas seguidas: el anverso y el reverso.
     </p>
 
     <UAlert

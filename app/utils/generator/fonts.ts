@@ -1,7 +1,7 @@
 // Font helpers shared by the preview, the PDF worker and the font pickers.
 
 import type { Font } from '@pdf-lib/fontkit'
-import type { CardDesign } from '#shared/cards/design'
+import { slotTextFont, type CardDesign } from '#shared/cards/design'
 import { fontWeight } from '#shared/cards/text'
 import {
   FALLBACK_FONT_IDS,
@@ -34,7 +34,7 @@ export function fontContexts(design: CardDesign, labels: readonly string[]): Fon
     if (band.height <= 0) continue
     for (const slot of [band.left, band.center, band.right]) {
       if (slot.type === 'text' && slot.text.trim())
-        contexts.push({ fontId: band.style.font, text: slot.text })
+        contexts.push({ fontId: slotTextFont(band, slot).fontId, text: slot.text })
       if (slot.type === 'code') contexts.push({ fontId: band.style.font, text: CODE_CHARS })
     }
   }

@@ -137,7 +137,7 @@ const logoMissing = computed(
           <figure class="flex min-w-0 flex-col items-center gap-1.5">
             <!-- eslint-disable-next-line vue/no-v-html -- SVG built by the card engine -->
             <div class="card-svg drop-shadow-md" :style="cardStyle" v-html="front" />
-            <figcaption class="text-xs text-muted">Cara delantera</figcaption>
+            <figcaption class="text-xs text-muted">Anverso</figcaption>
           </figure>
           <figure v-if="back" class="flex min-w-0 flex-col items-center gap-1.5">
             <!-- eslint-disable-next-line vue/no-v-html -- SVG built by the card engine -->
@@ -155,7 +155,7 @@ const logoMissing = computed(
           <figure class="flex min-w-0 flex-col items-center gap-1.5">
             <!-- eslint-disable-next-line vue/no-v-html -- SVG built by the card engine -->
             <div class="card-svg shadow-md" :style="sheetStyle" v-html="sheetFront" />
-            <figcaption class="text-xs text-muted">Página 1 · caras delanteras</figcaption>
+            <figcaption class="text-xs text-muted">Página 1 · anversos</figcaption>
           </figure>
           <figure v-if="sheetBack" class="flex min-w-0 flex-col items-center gap-1.5">
             <!-- eslint-disable-next-line vue/no-v-html -- SVG built by the card engine -->

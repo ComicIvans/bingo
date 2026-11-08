@@ -107,3 +107,17 @@ export const FALLBACK_FONT_IDS_BOLD: string[] = [
 export function findFont(id: string): FontEntry | undefined {
   return FONTS.find((f) => f.id === id)
 }
+
+/**
+ * Bold weight of a bundled font's family (700 when it has it, else the
+ * lightest weight from 600), or null when the font is already bold, is not
+ * bundled or its family has no bold weight.
+ */
+export function boldFontId(id: string): string | null {
+  const font = findFont(id)
+  if (!font || font.weight >= 600) return null
+  const bold = FONTS.filter((f) => f.family === font.family && f.weight >= 600).sort(
+    (a, b) => Math.abs(a.weight - 700) - Math.abs(b.weight - 700) || a.weight - b.weight
+  )[0]
+  return bold?.id ?? null
+}

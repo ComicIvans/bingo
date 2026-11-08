@@ -178,8 +178,11 @@ export class TextEngine {
     return lines
   }
 
-  /** SVG path data for a shaped text drawn at (x, baseline), in mm. */
-  svgPath(shaped: ShapedText, x: number, baseline: number): string {
+  /**
+   * SVG path data for a shaped text drawn at (x, baseline), in mm. `slant`
+   * shifts each point right by its height above the baseline times slant.
+   */
+  svgPath(shaped: ShapedText, x: number, baseline: number, slant = 0): string {
     let d = ''
     for (const run of shaped.runs) {
       let pen = x + run.dx
@@ -188,7 +191,8 @@ export class TextEngine {
           glyph.path as unknown as { commands: PathCommand[] },
           run.scale,
           pen,
-          baseline
+          baseline,
+          slant
         )
         pen += run.advances[i]!
       }
@@ -199,23 +203,29 @@ export class TextEngine {
 
 const f = (n: number) => Math.round(n * 1000) / 1000
 
-function pathToSvg(path: { commands: PathCommand[] }, s: number, ox: number, oy: number): string {
-  const X = (v: number) => f(ox + v * s)
-  const Y = (v: number) => f(oy - v * s)
+function pathToSvg(
+  path: { commands: PathCommand[] },
+  s: number,
+  ox: number,
+  oy: number,
+  slant: number
+): string {
+  // Font units have y pointing up from the baseline.
+  const P = (x: number, y: number) => `${f(ox + (x + y * slant) * s)} ${f(oy - y * s)}`
   let d = ''
   for (const { command, args: a } of path.commands) {
     switch (command) {
       case 'moveTo':
-        d += `M${X(a[0]!)} ${Y(a[1]!)}`
+        d += `M${P(a[0]!, a[1]!)}`
         break
       case 'lineTo':
-        d += `L${X(a[0]!)} ${Y(a[1]!)}`
+        d += `L${P(a[0]!, a[1]!)}`
         break
       case 'quadraticCurveTo':
-        d += `Q${X(a[0]!)} ${Y(a[1]!)} ${X(a[2]!)} ${Y(a[3]!)}`
+        d += `Q${P(a[0]!, a[1]!)} ${P(a[2]!, a[3]!)}`
         break
       case 'bezierCurveTo':
-        d += `C${X(a[0]!)} ${Y(a[1]!)} ${X(a[2]!)} ${Y(a[3]!)} ${X(a[4]!)} ${Y(a[5]!)}`
+        d += `C${P(a[0]!, a[1]!)} ${P(a[2]!, a[3]!)} ${P(a[4]!, a[5]!)}`
         break
       case 'closePath':
         d += 'Z'

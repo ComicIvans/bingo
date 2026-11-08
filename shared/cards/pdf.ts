@@ -13,13 +13,20 @@ import {
   closePath,
   clip,
   endPath,
+  degrees,
+  setLineJoin,
+  setLineWidth,
+  setStrokingColor,
+  setTextRenderingMode,
+  LineJoinStyle,
+  TextRenderingMode,
   type PDFFont,
   type PDFImage,
   type PDFPage,
   type Color,
 } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
-import { PT_PER_MM, type CardDesign } from './design.ts'
+import { FAKE_BOLD_STROKE, ITALIC_SLANT, PT_PER_MM, type CardDesign } from './design.ts'
 import { roundedRectPath } from './paths.ts'
 import type { GeneratedCard, GridSpec } from './grid.ts'
 import { computeImposition, cropMarks, planPages, type SheetOptions } from './impose.ts'
@@ -152,11 +159,33 @@ class PdfPainter {
         }
         case 'text': {
           const color = parseColor(op.color) ?? rgb(0, 0, 0)
+          // Synthetic bold: fill and outline the glyphs (the text rendering
+          // mode lives in the graphics state, so it reaches drawText's own).
+          if (op.fakeBold)
+            page.pushOperators(
+              pushGraphicsState(),
+              setTextRenderingMode(TextRenderingMode.FillAndOutline),
+              setLineWidth(FAKE_BOLD_STROKE * op.size),
+              setLineJoin(LineJoinStyle.Round),
+              setStrokingColor(color)
+            )
+          // Synthetic italic: the text matrix shifts x by y * tan(ySkew).
+          const skew = op.italic
+            ? { ySkew: degrees((Math.atan(ITALIC_SLANT) * 180) / Math.PI) }
+            : {}
           for (const run of op.runs) {
             const font = await this.font(run.fontId)
             if (!font) continue
-            page.drawText(run.text, { x: X(op.x + run.dx), y: Y(op.y), size: op.size, font, color })
+            page.drawText(run.text, {
+              x: X(op.x + run.dx),
+              y: Y(op.y),
+              size: op.size,
+              font,
+              color,
+              ...skew,
+            })
           }
+          if (op.fakeBold) page.pushOperators(popGraphicsState())
           break
         }
         case 'image': {

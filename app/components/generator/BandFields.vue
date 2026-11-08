@@ -28,8 +28,9 @@ const maxHeight = computed(() => Math.max(5, Math.floor(design.value.height / 2)
         <GeneratorSlotField v-model="design[props.band].right" label="Derecha" />
       </div>
       <p class="text-xs text-muted">
-        Los textos se reducen solos si no caben. El código identifica cada cartón para comprobarlo
-        en el panel.
+        Los textos se reducen solos si no caben. La negrita usa el grosor negrita de la fuente si lo
+        tiene, y la cursiva inclina las letras. El código identifica cada cartón para comprobarlo en
+        el panel.
       </p>
     </template>
   </div>

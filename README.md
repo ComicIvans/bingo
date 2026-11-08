@@ -19,9 +19,9 @@ Une y mejora dos proyectos anteriores: `bingo` (generador de cartones con Puppet
 
 - Formatos: clásico de 90 bolas (3 × 9, 5 por fila, columnas por decenas), americano de 75 (5 × 5 con casilla libre opcional) y rejilla personalizada.
 - Conjuntos: números, tabla periódica y símbolos de ciencias, y conjuntos propios creados en el panel o importados desde un CSV.
-- Diseño: tamaño del cartón, márgenes, colores, bordes, fuentes (23 familias incluidas y fuentes propias en TTF/OTF), cabecera y pie con texto, imágenes o el código del cartón, casilla libre y trasera con imagen, logo y textos.
+- Diseño: tamaño del cartón, márgenes, colores, bordes, fuentes (23 familias incluidas y fuentes propias en TTF/OTF), cabecera y pie con texto, imágenes o el código del cartón, casilla libre y reverso con imagen, logo y textos.
 - Vista previa exacta: la previsualización dibuja los mismos glifos, en las mismas posiciones, que el PDF.
-- PDF: un cartón por página o varios por folio (A4, A3, A5, SRA3, Carta, Legal, Tabloide o tamaño personalizado), con margen, separación, marcas de corte y la trasera en la página siguiente, colocada en espejo para imprimir a doble cara.
+- PDF: un cartón por página o varios por folio (A4, A3, A5, SRA3, Carta, Legal, Tabloide o tamaño personalizado), con margen, separación, marcas de corte y el reverso en la página siguiente, colocada en espejo para imprimir a doble cara.
 - Cada cartón lleva un código (`K3F9-042`). Si generas los cartones con la sesión del panel iniciada, el lote queda registrado y el panel puede comprobar cualquier cartón; si no, puedes descargar la ficha del lote e importarla después.
 
 **Partida en directo**
