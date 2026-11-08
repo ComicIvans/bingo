@@ -29,6 +29,8 @@ export interface CustomFormatOptions {
   perRow: number
   maxPerColumn: number
   columnOrder: boolean
+  /** With column order, items from lowest to highest top to bottom. */
+  sortColumns: boolean
   freeCenter: boolean
 }
 
@@ -71,7 +73,15 @@ export function defaultOptions(): GeneratorOptions {
     setId: '',
     formatKind: 'classic90',
     americanFreeCenter: true,
-    custom: { rows: 4, cols: 4, perRow: 4, maxPerColumn: 4, columnOrder: false, freeCenter: false },
+    custom: {
+      rows: 4,
+      cols: 4,
+      perRow: 4,
+      maxPerColumn: 4,
+      columnOrder: false,
+      sortColumns: true,
+      freeCenter: false,
+    },
     count: 20,
     firstNumber: 1,
     batchName: '',
@@ -169,6 +179,7 @@ export function sanitizeOptions(raw: unknown): GeneratorOptions {
       perRow: num(custom.perRow, base.custom.perRow, 1, 12, true),
       maxPerColumn: num(custom.maxPerColumn, base.custom.maxPerColumn, 1, 12, true),
       columnOrder: bool(custom.columnOrder, base.custom.columnOrder),
+      sortColumns: bool(custom.sortColumns, base.custom.sortColumns),
       freeCenter: bool(custom.freeCenter, base.custom.freeCenter),
     },
     count,

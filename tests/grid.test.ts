@@ -21,7 +21,7 @@ const range = (n: number) => Array.from({ length: n }, (_, i) => i + 1)
 
 function assertCardValid(cells: number[][], spec: GridSpec, indices: number[]) {
   expect(cells).toHaveLength(spec.rows)
-  const buckets = spec.columnOrder ? columnBuckets(indices, spec.cols) : null
+  const buckets = spec.columnOrder ? columnBuckets(indices, spec.cols, spec.tens) : null
   const seen = new Set<number>()
   let coverable = 0
   for (let c = 0; c < spec.cols; c++) {
@@ -30,7 +30,7 @@ function assertCardValid(cells: number[][], spec: GridSpec, indices: number[]) {
     expect(items.length).toBeLessThanOrEqual(spec.maxPerColumn)
     if (buckets) {
       for (const v of items) expect(buckets[c]).toContain(v)
-      expect([...items].sort((a, b) => a - b)).toEqual(items)
+      if (spec.sortColumns) expect([...items].sort((a, b) => a - b)).toEqual(items)
     }
     if (items.length || column.includes(FREE)) coverable++
   }
@@ -82,6 +82,59 @@ const FORMATS: [string, CardFormat, number][] = [
       freeCenter: false,
     },
     50,
+  ],
+  [
+    'custom 3x3 free, one per row (free cell covers its column)',
+    {
+      kind: 'custom',
+      rows: 3,
+      cols: 3,
+      perRow: 1,
+      maxPerColumn: 3,
+      columnOrder: false,
+      freeCenter: true,
+    },
+    30,
+  ],
+  [
+    'custom 9x9 tight (every column full but one cell)',
+    {
+      kind: 'custom',
+      rows: 9,
+      cols: 9,
+      perRow: 8,
+      maxPerColumn: 8,
+      columnOrder: false,
+      freeCenter: false,
+    },
+    90,
+  ],
+  [
+    'custom 3x9 tight (every column with 2 items)',
+    {
+      kind: 'custom',
+      rows: 3,
+      cols: 9,
+      perRow: 6,
+      maxPerColumn: 2,
+      columnOrder: true,
+      freeCenter: false,
+    },
+    90,
+  ],
+  [
+    'custom 5x5 free, unsorted columns',
+    {
+      kind: 'custom',
+      rows: 5,
+      cols: 5,
+      perRow: 3,
+      maxPerColumn: 3,
+      columnOrder: true,
+      sortColumns: false,
+      freeCenter: true,
+    },
+    60,
   ],
   [
     'custom 3x3 free',
@@ -145,6 +198,42 @@ describe('generateBatch', () => {
     })) {
       expect(card.cells.flat().filter((v) => v > 0)).toHaveLength(15)
     }
+  })
+
+  it('groups classic columns by tens', () => {
+    const ranges = columnBuckets(range(90), 9, true).map((b) => [b[0], b.at(-1)])
+    expect(ranges).toEqual([
+      [1, 9],
+      [10, 19],
+      [20, 29],
+      [30, 39],
+      [40, 49],
+      [50, 59],
+      [60, 69],
+      [70, 79],
+      [80, 90],
+    ])
+    // Other sizes keep near-equal ranges.
+    expect(columnBuckets(range(75), 5, true).map((b) => b.length)).toEqual([15, 15, 15, 15, 15])
+  })
+
+  it('does not sort 75-ball columns', () => {
+    const spec = gridSpecFor({ kind: 'american75', freeCenter: false })
+    const cards = generateBatch({
+      engine: ENGINE_VERSION,
+      seed: 'u',
+      spec,
+      indices: range(75),
+      count: 50,
+    })
+    const sortedColumns = cards.flatMap((card) =>
+      [0, 1, 2, 3, 4].filter((c) => {
+        const column = card.cells.map((row) => row[c]!)
+        return column.every((v, r) => r === 0 || v > column[r - 1]!)
+      })
+    )
+    // 1 in 120 columns comes out sorted by chance.
+    expect(sortedColumns.length).toBeLessThan(15)
   })
 
   it('fails clearly when there are not enough distinct cards', () => {

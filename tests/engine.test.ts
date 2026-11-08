@@ -46,6 +46,13 @@ const GOLDEN_CASES: Record<string, GoldenCase> = {
   'custom-3x3-free-3': { format: custom(3, 3, 3, 3, true, true), setSize: 30, count: 100 },
   'custom-3x9-tight': { format: custom(3, 9, 6, 2, true, false), setSize: 90, count: 200 },
   'custom-2x2-all': { format: custom(2, 2, 2, 2, false, false), setSize: 5, count: 5 },
+  // From version 2 (version 1 cannot build them).
+  'custom-9x9-tight': { format: custom(9, 9, 8, 8, false, false), setSize: 90, count: 100 },
+  'custom-5x5-unsorted-free': {
+    format: { ...custom(5, 5, 3, 3, true, true), sortColumns: false } as CardFormat,
+    setSize: 60,
+    count: 100,
+  },
 }
 
 function goldenHash(engine: number, name: string): string {
@@ -78,6 +85,19 @@ const GOLDEN: Record<number, Record<string, string>> = {
     'custom-3x9-tight': '2f088c4f27bb6039',
     'custom-2x2-all': 'f5b3f97f870fa1db',
   },
+  2: {
+    classic90: '9fa2aace94cfeb1d',
+    'american75-free': 'a7c55f543c1b984a',
+    'american75-90': 'b20d227d71eb0cee',
+    'custom-3x7-uneven': '78a4cf420f53d67b',
+    'custom-4x6-random': 'f38e4068911d3580',
+    'custom-3x3-free-1': '355d5de9cf65a346',
+    'custom-3x3-free-3': '90521332c2b76d42',
+    'custom-3x9-tight': '98f8eedbdc745af7',
+    'custom-2x2-all': '7faeb1c7cfbeee93',
+    'custom-9x9-tight': '78541e87a69a40b6',
+    'custom-5x5-unsorted-free': 'c2f5b07d96ec5987',
+  },
 }
 
 describe('generator versions', () => {
@@ -86,7 +106,7 @@ describe('generator versions', () => {
   })
 
   for (const engine of ENGINE_VERSIONS)
-    for (const name of Object.keys(GOLDEN_CASES))
+    for (const name of Object.keys(GOLDEN[engine] ?? {}))
       it(`v${engine} still generates the same ${name} cards`, () => {
         expect(goldenHash(engine, name)).toBe(GOLDEN[engine]![name])
       })

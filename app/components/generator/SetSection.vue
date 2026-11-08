@@ -247,7 +247,13 @@ const perCard = computed(() => itemsPerCard(spec.value))
       <USwitch
         v-model="options.custom.columnOrder"
         label="Columnas por tramos"
-        description="Cada columna toma un tramo consecutivo del conjunto, ordenado de arriba abajo, como en el bingo clásico."
+        description="Cada columna toma un tramo consecutivo del conjunto, como en el bingo clásico."
+      />
+      <USwitch
+        v-if="options.custom.columnOrder"
+        v-model="options.custom.sortColumns"
+        label="Ordenar cada columna"
+        description="De menor a mayor de arriba abajo, como en el bingo de 90 bolas. Sin ordenar, como en el de 75, las filas de arriba no se llevan siempre los más bajos."
       />
       <USwitch
         v-model="options.custom.freeCenter"
