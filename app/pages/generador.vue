@@ -87,8 +87,10 @@ const isDesktop = useMediaQuery('(min-width: 1024px)')
         v-else
         class="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:gap-6"
       >
+        <!-- shrink-0: the cards clip their overflow, so a flex column would
+             squeeze them to fit instead of scrolling. -->
         <div
-          class="flex min-w-0 flex-col gap-4 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pb-1"
+          class="flex min-w-0 flex-col gap-4 *:shrink-0 lg:sticky lg:top-20 lg:col-start-2 lg:row-start-1 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto lg:pb-1"
         >
           <GeneratorPreviewPanel />
           <GeneratorExportPanel v-if="isDesktop" />
